@@ -1,0 +1,16 @@
+---
+description: Golf tournament live scoring frontend (Next.js, SignalR, backend contract)
+alwaysApply: true
+---
+
+# Golf Tournament Frontend
+
+- Next.js App Router, TypeScript, Tailwind. See `FRONTEND_PROJECT_CONTEXT.md`.
+- Backend: `NicolasEmmel/golf-tournament-backend` — inspect `docs/BACKEND_CONTRACT.md` before integration.
+- Flutter repo is **visual/UX reference only**; do not copy its architecture.
+- One shared SignalR connection via provider; no hub logic in leaf components.
+- No frontend gross/net/handicap calculation; display backend values only.
+- REST and SignalR calls live under `services/`; use typed models in `models/`.
+- Prefer React Context + hooks over Redux unless requirements change.
+- Do not commit `.env.local` or secrets. Use `NEXT_PUBLIC_*` only for public URLs.
+- Implement one phase at a time; avoid speculative features.

@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Golf Tournament Live Scoring — Frontend
 
-## Getting Started
+Next.js (App Router) frontend for the [golf-tournament-backend](https://github.com/NicolasEmmel/golf-tournament-backend) live scoring API.
 
-First, run the development server:
+## Status
+
+**Phase 1 complete:** project foundation, routes, design tokens, typed backend contract docs, and test tooling. SignalR, scoring, leaderboard, and admin flows are not implemented yet.
+
+See `FRONTEND_PROJECT_CONTEXT.md` for the full product spec and phased plan.
+
+## Stack
+
+- Next.js · React · TypeScript · Tailwind CSS
+- Vitest (unit) · Playwright (e2e)
+- SignalR client (Phase 4)
+
+## Local development
 
 ```bash
+cp .env.example .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint |
+| `npm run format` | Prettier write |
+| `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Playwright |
 
-## Learn More
+## Backend integration
 
-To learn more about Next.js, take a look at the following resources:
+- Contract: [`docs/BACKEND_CONTRACT.md`](docs/BACKEND_CONTRACT.md)
+- Types: [`models/tournament.ts`](models/tournament.ts)
+- Hub events: [`services/signalr/events.ts`](services/signalr/events.ts)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Production backend: `https://golf-tournament-backend.fly.dev`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Routes
 
-## Deploy on Vercel
+| Path | Purpose |
+|------|---------|
+| `/` | Home / navigation |
+| `/leaderboard` | Public leaderboard |
+| `/scoring` | Mobile score entry |
+| `/display` | Large-screen display |
+| `/admin` | Administration hub |
+| `/admin/players` | Player management |
+| `/admin/flights` | Flights |
+| `/admin/tournament` | Tournament day / reset |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT (add `LICENSE` when publishing the repository).
