@@ -25,8 +25,8 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
             <th className="px-3 py-3">#</th>
             <th className="px-3 py-3">Spieler</th>
             <th className="px-3 py-3 text-center">Thru</th>
-            <th className="px-3 py-3 text-center">Tag</th>
-            <th className="px-3 py-3 text-center">Brutto</th>
+            <th className="px-3 py-3 text-center">Heute</th>
+            <th className="px-3 py-3 text-center">Gesamt</th>
           </tr>
         </thead>
         <tbody>
@@ -52,10 +52,10 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
                 {entry.thru >= 18 ? "F" : entry.thru}
               </td>
               <td className="px-3 py-3 text-center font-semibold tabular-nums">
-                {entry.totalStrokesDay || "—"}
+                {entry.totalStrokesDay > 0 ? entry.totalStrokesDay : "—"}
               </td>
               <td className="px-3 py-3 text-center font-bold tabular-nums">
-                {entry.gross}
+                {entry.totalStrokes > 0 ? entry.totalStrokes : "—"}
               </td>
             </tr>
           ))}
