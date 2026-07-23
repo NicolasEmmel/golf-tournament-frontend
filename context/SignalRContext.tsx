@@ -56,6 +56,7 @@ const SignalRContext = createContext<SignalRContextValue | null>(null);
 
 export function SignalRProvider({ children }: { children: ReactNode }) {
   const connectionRef = useRef<HubConnection | null>(null);
+  const connectingPromiseRef = useRef<Promise<HubConnection> | null>(null);
   const registrationRef = useRef<RegistrationMode>({ kind: "none" });
   const [connectionState, setConnectionState] =
     useState<SignalRConnectionState>("connecting");
@@ -99,66 +100,101 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       return connectionRef.current;
     }
 
-    if (!connectionRef.current) {
-      const connection = createTournamentHubConnection();
-      connectionRef.current = connection;
+    if (connectingPromiseRef.current) {
+      return connectingPromiseRef.current;
+    }
 
-      attachTournamentHubHandlers(connection, {
-        onSyncState: applySync,
-        onScorecardUpdated: (card) => {
-          const reg = registrationRef.current;
-          // Only keep the registered scorer's card — flight-mate submits must not
-          // overwrite the local player's scorecard in shared state.
-          if (reg.kind === "scoring" && card.playerUuid !== reg.playerUuid) {
-            return;
-          }
-          setScorecard(card);
-        },
-        onLeaderboardUpdated: (snapshot) => {
-          setLeaderboards((prev) => {
-            const others = prev.filter((s) => s.category !== snapshot.category);
-            return [...others, snapshot].sort((a, b) => a.category - b.category);
-          });
-        },
-      });
+    connectingPromiseRef.current = (async () => {
+      if (!connectionRef.current) {
+        const connection = createTournamentHubConnection();
+        connectionRef.current = connection;
 
-      connection.onreconnecting(() => {
-        setConnectionState("reconnecting");
-      });
-      connection.onreconnected(() => {
-        setConnectionState("connected");
-        setLastError(null);
-        void reRegister(connection).catch((error) => {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Erneute Registrierung fehlgeschlagen";
-          setLastError(message);
+        attachTournamentHubHandlers(connection, {
+          onSyncState: applySync,
+          onScorecardUpdated: (card) => {
+            const reg = registrationRef.current;
+            // Only keep the registered scorer's card — flight-mate submits must not
+            // overwrite the local player's scorecard in shared state.
+            if (reg.kind === "scoring" && card.playerUuid !== reg.playerUuid) {
+              return;
+            }
+            setScorecard(card);
+          },
+          onLeaderboardUpdated: (snapshot) => {
+            setLeaderboards((prev) => {
+              const others = prev.filter(
+                (s) => s.category !== snapshot.category,
+              );
+              return [...others, snapshot].sort(
+                (a, b) => a.category - b.category,
+              );
+            });
+          },
         });
-      });
-      connection.onclose(() => {
-        setConnectionState("disconnected");
-      });
-    }
 
-    const connection = connectionRef.current;
-    if (connection.state === HubConnectionState.Disconnected) {
-      setConnectionState("connecting");
-      try {
-        await connection.start();
-        setConnectionState("connected");
-        setLastError(null);
-      } catch (error) {
-        setConnectionState("failed");
-        const message =
-          error instanceof Error ? error.message : "Verbindung fehlgeschlagen";
-        setLastError(message);
-        throw error;
+        connection.onreconnecting(() => {
+          setConnectionState("reconnecting");
+        });
+        connection.onreconnected(() => {
+          setConnectionState("connected");
+          setLastError(null);
+          void reRegister(connection).catch((error) => {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Erneute Registrierung fehlgeschlagen";
+            setLastError(message);
+          });
+        });
+        connection.onclose(() => {
+          setConnectionState("disconnected");
+        });
       }
-    }
 
-    setConnectionState(mapHubState(connection.state) as SignalRConnectionState);
-    return connection;
+      const connection = connectionRef.current;
+      if (connection.state !== HubConnectionState.Connected) {
+        setConnectionState("connecting");
+        try {
+          if (connection.state === HubConnectionState.Disconnected) {
+            await connection.start();
+          } else {
+            // Another start is in flight — wait until Connected or terminal.
+            const deadline = Date.now() + 30_000;
+            while (
+              connection.state !== HubConnectionState.Connected &&
+              Date.now() < deadline
+            ) {
+              if (
+                connection.state === HubConnectionState.Disconnected ||
+                connection.state === HubConnectionState.Disconnecting
+              ) {
+                await connection.start();
+                break;
+              }
+              await new Promise((r) => setTimeout(r, 50));
+            }
+            if (connection.state !== HubConnectionState.Connected) {
+              throw new Error("Verbindung nicht rechtzeitig hergestellt");
+            }
+          }
+          setConnectionState("connected");
+          setLastError(null);
+        } catch (error) {
+          setConnectionState("failed");
+          const message =
+            error instanceof Error ? error.message : "Verbindung fehlgeschlagen";
+          setLastError(message);
+          throw error;
+        }
+      }
+
+      setConnectionState(mapHubState(connection.state) as SignalRConnectionState);
+      return connection;
+    })().finally(() => {
+      connectingPromiseRef.current = null;
+    });
+
+    return connectingPromiseRef.current;
   }, [applySync, reRegister]);
 
   useEffect(() => {
@@ -192,6 +228,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
     registrationRef.current = { kind: "leaderboard" };
     setRegisteredPlayerUuid(null);
     await hubRegisterLeaderboard(connection);
+    setLastError(null);
   }, [ensureConnected]);
 
   const submitScore = useCallback(

@@ -13,7 +13,11 @@ import { useSignalR } from "@/context/SignalRContext";
 import { useTournament } from "@/context/TournamentContext";
 import { routes } from "@/lib/constants";
 import { normalizeError } from "@/lib/errors";
-import { LeaderboardCategory } from "@/models/tournament";
+import {
+  LeaderboardCategory,
+  type LeaderboardSnapshot,
+} from "@/models/tournament";
+import { tournamentApi } from "@/services/api/tournamentApi";
 
 const categories: { id: LeaderboardCategory; label: string }[] = [
   { id: LeaderboardCategory.Men, label: "Herren" },
@@ -34,14 +38,54 @@ export default function LeaderboardPage() {
   );
   const [bootError, setBootError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [restBoards, setRestBoards] = useState<LeaderboardSnapshot[]>([]);
 
+  // Show scores ASAP via REST; SignalR then keeps them live.
+  useEffect(() => {
+    const day = state?.currentDay;
+    if (day == null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const boards = await tournamentApi.getLeaderboards(day);
+        if (!cancelled) setRestBoards(boards);
+      } catch {
+        /* live register may still fill the table */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state?.currentDay]);
+
+  // Register (and retry) whenever we are connected — clears sticky boot errors.
+  useEffect(() => {
+    if (connectionState !== "connected") return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await registerLeaderboardViewer();
+        if (!cancelled) {
+          setBootError(null);
+          setReady(true);
+        }
+      } catch (err) {
+        if (!cancelled) setBootError(normalizeError(err));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionState, registerLeaderboardViewer]);
+
+  // Kick off connect if we landed here while still offline / connecting.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         await ensureConnected();
-        await registerLeaderboardViewer();
-        if (!cancelled) setReady(true);
       } catch (err) {
         if (!cancelled) setBootError(normalizeError(err));
       }
@@ -49,12 +93,16 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [ensureConnected, registerLeaderboardViewer]);
+  }, [ensureConnected]);
+
+  const boards = leaderboards.length > 0 ? leaderboards : restBoards;
 
   const entries = useMemo(
-    () => leaderboards.find((s) => s.category === category)?.entries ?? [],
-    [leaderboards, category],
+    () => boards.find((s) => s.category === category)?.entries ?? [],
+    [boards, category],
   );
+
+  const showTable = ready || boards.length > 0;
 
   return (
     <FairwayShell>
@@ -85,10 +133,17 @@ export default function LeaderboardPage() {
           ))}
         </div>
 
-        <div className="mt-4 flex-1">
-          {bootError ? (
+        <div className="mt-4 flex-1 space-y-3">
+          {bootError && !showTable ? (
             <p className="rounded-xl bg-error/10 p-4 text-error">{bootError}</p>
-          ) : !ready && leaderboards.length === 0 ? (
+          ) : null}
+          {bootError && showTable ? (
+            <p className="rounded-xl bg-warning/15 px-4 py-2 text-sm text-warning">
+              Live-Verbindung verzögert — aktuelle Rangliste wird trotzdem
+              angezeigt. ({bootError})
+            </p>
+          ) : null}
+          {!showTable ? (
             <LoadingState message="Verbindung zur Live-Rangliste…" />
           ) : (
             <LeaderboardTable entries={entries} />
