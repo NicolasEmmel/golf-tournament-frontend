@@ -15,8 +15,7 @@ import { routes } from "@/lib/constants";
 import { normalizeError } from "@/lib/errors";
 import { LeaderboardCategory } from "@/models/tournament";
 
-const categories: { id: LeaderboardCategory | "all"; label: string }[] = [
-  { id: "all", label: "All" },
+const categories: { id: LeaderboardCategory; label: string }[] = [
   { id: LeaderboardCategory.Men, label: "Men" },
   { id: LeaderboardCategory.Women, label: "Women" },
   { id: LeaderboardCategory.Seniors, label: "Seniors" },
@@ -30,8 +29,8 @@ export default function LeaderboardPage() {
     registerLeaderboardViewer,
     ensureConnected,
   } = useSignalR();
-  const [category, setCategory] = useState<(typeof categories)[number]["id"]>(
-    "all",
+  const [category, setCategory] = useState<LeaderboardCategory>(
+    LeaderboardCategory.Men,
   );
   const [bootError, setBootError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -52,29 +51,10 @@ export default function LeaderboardPage() {
     };
   }, [ensureConnected, registerLeaderboardViewer]);
 
-  const entries = useMemo(() => {
-    if (category === "all") {
-      const byPlayer = new Map<string, (typeof leaderboards)[0]["entries"][0]>();
-      for (const snapshot of leaderboards) {
-        for (const entry of snapshot.entries) {
-          const existing = byPlayer.get(entry.playerUuid);
-          if (!existing || entry.netto < existing.netto) {
-            byPlayer.set(entry.playerUuid, entry);
-          }
-        }
-      }
-      return [...byPlayer.values()].sort(
-        (a, b) => a.netto - b.netto || a.gross - b.gross,
-      );
-    }
-    return leaderboards.find((s) => s.category === category)?.entries ?? [];
-  }, [leaderboards, category]);
-
-  // Remap positions when "all" merges categories
-  const displayEntries =
-    category === "all"
-      ? entries.map((e, i) => ({ ...e, position: i + 1 }))
-      : entries;
+  const entries = useMemo(
+    () => leaderboards.find((s) => s.category === category)?.entries ?? [],
+    [leaderboards, category],
+  );
 
   return (
     <FairwayShell>
@@ -111,7 +91,7 @@ export default function LeaderboardPage() {
           ) : !ready && leaderboards.length === 0 ? (
             <LoadingState message="Connecting to live leaderboard…" />
           ) : (
-            <LeaderboardTable entries={displayEntries} />
+            <LeaderboardTable entries={entries} />
           )}
         </div>
 

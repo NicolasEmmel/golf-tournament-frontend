@@ -21,7 +21,8 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        "border-b border-black/5 bg-surface-mint/90 backdrop-blur",
+        // On-course mobile: no top bar — circular actions / page CTAs cover nav.
+        "hidden border-b border-black/5 bg-surface-mint/90 backdrop-blur md:block",
         className,
       )}
     >

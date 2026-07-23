@@ -120,22 +120,6 @@ export default function AdminPlayersPage() {
             />
           </label>
           <label className="block text-sm font-semibold">
-            Handicap index
-            <input
-              type="number"
-              step="0.1"
-              required
-              value={form.handicapIndex}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  handicapIndex: Number(e.target.value),
-                }))
-              }
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm font-semibold">
             Gender
             <select
               value={form.gender}
@@ -195,7 +179,6 @@ export default function AdminPlayersPage() {
               <thead className="bg-surface-mint text-left text-xs font-bold uppercase text-primary">
                 <tr>
                   <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">HCP</th>
                   <th className="px-4 py-3">Gender</th>
                   <th className="px-4 py-3">Senior</th>
                   <th className="px-4 py-3" />
@@ -205,7 +188,6 @@ export default function AdminPlayersPage() {
                 {players.map((p) => (
                   <tr key={p.uuid} className="border-t border-border/60">
                     <td className="px-4 py-3 font-semibold">{p.name}</td>
-                    <td className="px-4 py-3">{p.handicapIndex}</td>
                     <td className="px-4 py-3">
                       {p.gender === Gender.Female ? "Female" : "Male"}
                     </td>

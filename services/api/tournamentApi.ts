@@ -51,6 +51,10 @@ export const flightApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  unassign: (day: number, playerUuid: string) =>
+    apiFetch<OperationResult>(`/api/flights/${day}/players/${playerUuid}`, {
+      method: "DELETE",
+    }),
   playersInFlight: (day: number, flightNumber: number) =>
     apiFetch<PlayerFlight[]>(`/api/flights/${day}/${flightNumber}/players`),
 } as const;

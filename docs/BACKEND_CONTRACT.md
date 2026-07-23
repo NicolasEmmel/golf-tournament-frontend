@@ -61,6 +61,7 @@ JSON uses **camelCase** (ASP.NET default serialization).
 | GET | `/api/flights/{day}` | — | `Flight[]` |
 | POST | `/api/flights` | `CreateFlightRequest` | `Flight` |
 | POST | `/api/flights/assign` | `AssignPlayerToFlightRequest` | `PlayerFlight` |
+| DELETE | `/api/flights/{day}/players/{playerUuid}` | — | `OperationResultDto` |
 | GET | `/api/flights/{day}/{flightNumber}/players` | — | `PlayerFlight[]` |
 
 ### Tournament — `/api/tournament`

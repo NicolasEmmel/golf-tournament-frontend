@@ -1,6 +1,7 @@
 "use client";
 
 import { Flag, Home, Send, Trophy } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CircularAction } from "@/components/common/CircularAction";
 import { ConnectionStatus } from "@/components/common/ConnectionStatus";
@@ -14,6 +15,17 @@ import { useSignalR } from "@/context/SignalRContext";
 import { useTournament } from "@/context/TournamentContext";
 import { routes } from "@/lib/constants";
 import { normalizeError } from "@/lib/errors";
+import {
+  HOLE_COUNT,
+  isFlightDayComplete,
+  scoreDraftKey,
+  type DraftScores,
+} from "@/lib/scoring";
+import {
+  clearScoringSession,
+  loadScoringSession,
+  saveScoringSession,
+} from "@/lib/scoringSession";
 import type { Hole, Player, PlayerFlight } from "@/models/tournament";
 import { playerApi } from "@/services/api/playerApi";
 import {
@@ -22,9 +34,11 @@ import {
   type CourseInfo,
 } from "@/services/api/tournamentApi";
 
-type DraftScores = Record<string, number>;
+const FLIGHT_COMPLETE_MESSAGE =
+  "This flight has already submitted all scores for today.";
 
 export default function ScoringPage() {
+  const router = useRouter();
   const { state } = useTournament();
   const {
     connectionState,
@@ -50,6 +64,8 @@ export default function ScoringPage() {
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const initialHoleSetFor = useRef<string | null>(null);
+  const resumeHoleIndex = useRef<number | null>(null);
+  const didTryResume = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,7 +122,7 @@ export default function ScoringPage() {
         if (!card) continue;
         for (const h of card.holes) {
           if (h.strokes > 0) {
-            fromServer[`${card.playerUuid}:${h.holeId}`] = h.strokes;
+            fromServer[scoreDraftKey(card.playerUuid, h.holeId)] = h.strokes;
           }
         }
       }
@@ -114,54 +130,134 @@ export default function ScoringPage() {
         setSaved((prev) => ({ ...prev, ...fromServer }));
         setDrafts((prev) => ({ ...prev, ...fromServer }));
       }
+
+      return {
+        mates: resolved,
+        scores: fromServer,
+        complete: isFlightDayComplete(
+          resolved.map((m) => m.uuid),
+          fromServer,
+        ),
+      };
     },
     [players],
   );
 
-  const handleSelectPlayer = async (player: Player) => {
-    setRegError(null);
-    setRegistering(true);
-    setSessionReady(false);
-    try {
-      const result = await registerScoringClient(player.uuid);
-      if (!result.success) {
-        setRegError(result.error ?? "Could not register for scoring.");
-        return;
+  const handleSelectPlayer = useCallback(
+    async (player: Player) => {
+      setRegError(null);
+      setRegistering(true);
+      setSessionReady(false);
+      try {
+        const result = await registerScoringClient(player.uuid);
+        if (!result.success) {
+          setRegError(result.error ?? "Could not register for scoring.");
+          clearScoringSession();
+          resumeHoleIndex.current = null;
+          return;
+        }
+        initialHoleSetFor.current = null;
+        // sessionReady is set after we confirm the flight is not already finished.
+        setSelected(player);
+      } catch (err) {
+        setRegError(normalizeError(err));
+        clearScoringSession();
+        resumeHoleIndex.current = null;
+      } finally {
+        setRegistering(false);
       }
-      initialHoleSetFor.current = null;
-      setSelected(player);
-      setSessionReady(true);
-    } catch (err) {
-      setRegError(normalizeError(err));
-    } finally {
-      setRegistering(false);
+    },
+    [registerScoringClient],
+  );
+
+  // Resume an in-progress scoring session after visiting leaderboard / refresh.
+  useEffect(() => {
+    if (didTryResume.current || playersLoading) return;
+    didTryResume.current = true;
+    const session = loadScoringSession();
+    if (!session) return;
+    const player = players.find((p) => p.uuid === session.playerUuid);
+    if (!player) {
+      clearScoringSession();
+      return;
     }
-  };
+    resumeHoleIndex.current = Math.min(
+      HOLE_COUNT - 1,
+      Math.max(0, Math.floor(session.holeIndex)),
+    );
+    void handleSelectPlayer(player);
+  }, [players, playersLoading, handleSelectPlayer]);
 
   useEffect(() => {
     if (!selected || !scorecard) return;
     if (scorecard.playerUuid !== selected.uuid) return;
 
     const currentDay = scorecard.day;
-    void loadFlight(selected, scorecard.flightNumber, currentDay);
+    let cancelled = false;
 
-    const nextSaved: DraftScores = {};
-    for (const h of scorecard.holes) {
-      if (h.strokes > 0) {
-        nextSaved[`${selected.uuid}:${h.holeId}`] = h.strokes;
+    void (async () => {
+      const nextSaved: DraftScores = {};
+      for (const h of scorecard.holes) {
+        if (h.strokes > 0) {
+          nextSaved[scoreDraftKey(selected.uuid, h.holeId)] = h.strokes;
+        }
       }
-    }
-    setSaved((prev) => ({ ...prev, ...nextSaved }));
-    setDrafts((prev) => ({ ...prev, ...nextSaved }));
 
-    // Only pick the starting hole once per player session — later scorecard
-    // updates must not fight with Send's hole advance (that skipped holes).
-    if (initialHoleSetFor.current !== selected.uuid) {
-      initialHoleSetFor.current = selected.uuid;
-      const firstOpen = scorecard.holes.findIndex((h) => h.strokes <= 0);
-      setHoleIndex(firstOpen >= 0 ? firstOpen : 0);
-    }
-  }, [selected, scorecard, loadFlight]);
+      const flight = await loadFlight(
+        selected,
+        scorecard.flightNumber,
+        currentDay,
+      );
+      if (cancelled) return;
+
+      const merged: DraftScores = { ...flight.scores, ...nextSaved };
+      setSaved((prev) => ({ ...prev, ...merged }));
+      setDrafts((prev) => ({ ...prev, ...merged }));
+
+      if (
+        isFlightDayComplete(
+          flight.mates.map((m) => m.uuid),
+          merged,
+        )
+      ) {
+        clearScoringSession();
+        clearSync();
+        setSelected(null);
+        setSessionReady(false);
+        setFlightMates([]);
+        setDrafts({});
+        setSaved({});
+        initialHoleSetFor.current = null;
+        resumeHoleIndex.current = null;
+        setRegError(FLIGHT_COMPLETE_MESSAGE);
+        return;
+      }
+
+      // Only pick the starting hole once per player session — later scorecard
+      // updates must not fight with Send's hole advance (that skipped holes).
+      if (initialHoleSetFor.current !== selected.uuid) {
+        initialHoleSetFor.current = selected.uuid;
+        if (resumeHoleIndex.current != null) {
+          setHoleIndex(resumeHoleIndex.current);
+          resumeHoleIndex.current = null;
+        } else {
+          const firstOpen = scorecard.holes.findIndex((h) => h.strokes <= 0);
+          setHoleIndex(firstOpen >= 0 ? firstOpen : 0);
+        }
+      }
+
+      setSessionReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, scorecard, loadFlight, clearSync]);
+
+  useEffect(() => {
+    if (!selected || !sessionReady) return;
+    saveScoringSession({ playerUuid: selected.uuid, holeIndex });
+  }, [selected, sessionReady, holeIndex]);
 
   useEffect(() => {
     setStatusMessage(null);
@@ -172,7 +268,7 @@ export default function ScoringPage() {
     setDrafts((prev) => {
       const next = { ...prev };
       for (const mate of flightMates) {
-        const key = `${mate.uuid}:${hole.number}`;
+        const key = scoreDraftKey(mate.uuid, hole.number);
         if (next[key] == null) {
           next[key] = saved[key] ?? hole.par;
         }
@@ -184,20 +280,35 @@ export default function ScoringPage() {
   const unsavedForHole = useMemo(() => {
     if (!hole) return false;
     return flightMates.some((mate) => {
-      const key = `${mate.uuid}:${hole.number}`;
+      const key = scoreDraftKey(mate.uuid, hole.number);
       return drafts[key] !== saved[key];
     });
   }, [drafts, saved, flightMates, hole]);
+
+  const finishAndGoHome = useCallback(() => {
+    clearScoringSession();
+    clearSync();
+    setSelected(null);
+    setSessionReady(false);
+    setFlightMates([]);
+    setDrafts({});
+    setSaved({});
+    setStatusMessage(null);
+    initialHoleSetFor.current = null;
+    resumeHoleIndex.current = null;
+    router.replace(routes.home);
+  }, [clearSync, router]);
 
   const handleSubmitHole = async () => {
     if (!hole || !selected) return;
     setSubmitting(true);
     setStatusMessage(null);
     try {
+      const nextSaved: DraftScores = { ...saved };
       for (const mate of flightMates) {
-        const key = `${mate.uuid}:${hole.number}`;
+        const key = scoreDraftKey(mate.uuid, hole.number);
         const strokes = drafts[key] ?? hole.par;
-        if (saved[key] === strokes) continue;
+        if (nextSaved[key] === strokes) continue;
         const result = await submitScore({
           day,
           playerUuid: mate.uuid,
@@ -207,10 +318,22 @@ export default function ScoringPage() {
         if (!result.success) {
           throw new Error(result.error ?? `Failed for ${mate.name}`);
         }
-        setSaved((prev) => ({ ...prev, [key]: strokes }));
+        nextSaved[key] = strokes;
       }
+      setSaved(nextSaved);
+
+      if (
+        isFlightDayComplete(
+          flightMates.map((m) => m.uuid),
+          nextSaved,
+        )
+      ) {
+        finishAndGoHome();
+        return;
+      }
+
       setStatusMessage("Scores saved");
-      if (holeIndex < 17) {
+      if (holeIndex < HOLE_COUNT - 1) {
         setHoleIndex((i) => i + 1);
       }
     } catch (err) {
@@ -221,6 +344,7 @@ export default function ScoringPage() {
   };
 
   const resetSession = () => {
+    clearScoringSession();
     clearSync();
     setSelected(null);
     setSessionReady(false);
@@ -230,6 +354,7 @@ export default function ScoringPage() {
     setRegError(null);
     setStatusMessage(null);
     initialHoleSetFor.current = null;
+    resumeHoleIndex.current = null;
   };
 
   if (!selected || !sessionReady) {
@@ -247,10 +372,10 @@ export default function ScoringPage() {
           </MintCard>
           {regError && (
             <div className="mb-4">
-              <ErrorState title="Registration failed" message={regError} />
+              <ErrorState title="Cannot start scoring" message={regError} />
             </div>
           )}
-          {registering ? (
+          {registering || (selected && !sessionReady) ? (
             <LoadingState message="Connecting and registering…" />
           ) : (
             <PlayerNamePicker
@@ -302,7 +427,9 @@ export default function ScoringPage() {
 
         <div className="mt-4 flex-1 space-y-3">
           {flightMates.map((mate) => {
-            const key = hole ? `${mate.uuid}:${hole.number}` : mate.uuid;
+            const key = hole
+              ? scoreDraftKey(mate.uuid, hole.number)
+              : mate.uuid;
             const value = drafts[key] ?? hole?.par ?? 4;
             const isSaved = saved[key] === value && saved[key] != null;
             const [first, ...rest] = mate.name.split(" ");
@@ -362,14 +489,14 @@ export default function ScoringPage() {
             Prev
           </button>
           <span className="text-xs font-semibold text-muted">
-            {holeIndex + 1} / 18
+            {holeIndex + 1} / {HOLE_COUNT}
             {unsavedForHole ? " · unsaved" : ""}
           </span>
           <button
             type="button"
             className="rounded-xl bg-surface px-4 py-2 text-sm font-semibold disabled:opacity-40"
-            disabled={holeIndex >= 17}
-            onClick={() => setHoleIndex((i) => Math.min(17, i + 1))}
+            disabled={holeIndex >= HOLE_COUNT - 1}
+            onClick={() => setHoleIndex((i) => Math.min(HOLE_COUNT - 1, i + 1))}
           >
             Next
           </button>

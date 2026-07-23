@@ -27,7 +27,6 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
             <th className="px-3 py-3 text-center">Thru</th>
             <th className="px-3 py-3 text-center">Day</th>
             <th className="px-3 py-3 text-center">Gross</th>
-            <th className="px-3 py-3 text-center">Net</th>
           </tr>
         </thead>
         <tbody>
@@ -57,9 +56,6 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
               </td>
               <td className="px-3 py-3 text-center font-bold tabular-nums">
                 {entry.gross}
-              </td>
-              <td className="px-3 py-3 text-center font-bold tabular-nums text-primary">
-                {entry.netto}
               </td>
             </tr>
           ))}

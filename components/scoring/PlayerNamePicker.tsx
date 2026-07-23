@@ -78,10 +78,9 @@ export function PlayerNamePicker({
                   <span className="block text-base font-extrabold">
                     {player.name}
                   </span>
-                  <span className="text-xs text-muted">
-                    HCP {player.handicapIndex}
-                    {player.isSenior ? " · Senior" : ""}
-                  </span>
+                  {player.isSenior ? (
+                    <span className="text-xs text-muted">Senior</span>
+                  ) : null}
                 </span>
               </button>
             </li>

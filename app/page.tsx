@@ -42,7 +42,7 @@ export default function HomePage() {
             <Trophy className="h-5 w-5" />
             Big-screen display
           </PrimaryCta>
-          <PrimaryCta href={routes.admin}>
+          <PrimaryCta href={routes.admin} className="hidden md:flex">
             <LayoutDashboard className="h-5 w-5" />
             Administration
           </PrimaryCta>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FairwayShell } from "@/components/common/FairwayShell";
 import { LoadingState } from "@/components/common/LoadingState";
 import { MintCard } from "@/components/common/MintCard";
@@ -12,9 +12,21 @@ import type { Flight, Player, PlayerFlight } from "@/models/tournament";
 import { playerApi } from "@/services/api/playerApi";
 import { flightApi } from "@/services/api/tournamentApi";
 
+function assignedPlayerUuids(
+  map: Record<number, PlayerFlight[]>,
+): Set<string> {
+  const uuids = new Set<string>();
+  for (const list of Object.values(map)) {
+    for (const assignment of list) {
+      uuids.add(assignment.playerUuid);
+    }
+  }
+  return uuids;
+}
+
 export default function AdminFlightsPage() {
-  const { state } = useTournament();
-  const [day, setDay] = useState(1);
+  const { state, loading: tournamentLoading } = useTournament();
+  const [day, setDay] = useState<number | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [assignments, setAssignments] = useState<
@@ -24,47 +36,77 @@ export default function AdminFlightsPage() {
   const [assignPlayerUuid, setAssignPlayerUuid] = useState("");
   const [assignFlight, setAssignFlight] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [busyPlayerUuid, setBusyPlayerUuid] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const refreshSeq = useRef(0);
 
+  // Wait for tournament state so we never fetch day 1 by default when the
+  // tournament is already on day 2 (that race showed the wrong players).
   useEffect(() => {
-    if (state?.currentDay) setDay(state.currentDay);
+    if (state?.currentDay != null) {
+      setDay((current) => current ?? state.currentDay);
+    }
   }, [state?.currentDay]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (targetDay: number) => {
+    const seq = ++refreshSeq.current;
     setLoading(true);
     setError(null);
     try {
       const [flightList, playerList] = await Promise.all([
-        flightApi.listForDay(day),
+        flightApi.listForDay(targetDay),
         playerApi.list(),
       ]);
-      setFlights(flightList);
-      setPlayers(playerList);
       const map: Record<number, PlayerFlight[]> = {};
       for (const f of flightList) {
-        map[f.number] = await flightApi.playersInFlight(day, f.number);
+        map[f.number] = await flightApi.playersInFlight(targetDay, f.number);
       }
+      if (seq !== refreshSeq.current) return;
+
+      const available = playerList.filter(
+        (p) => !assignedPlayerUuids(map).has(p.uuid),
+      );
+
+      setFlights(flightList);
+      setPlayers(playerList);
       setAssignments(map);
-      setAssignPlayerUuid((current) => current || playerList[0]?.uuid || "");
+      setAssignPlayerUuid((current) =>
+        available.some((p) => p.uuid === current)
+          ? current
+          : (available[0]?.uuid ?? ""),
+      );
+      setAssignFlight((current) =>
+        flightList.some((f) => f.number === current)
+          ? current
+          : (flightList[0]?.number ?? 1),
+      );
     } catch (err) {
+      if (seq !== refreshSeq.current) return;
       setError(normalizeError(err));
     } finally {
-      setLoading(false);
+      if (seq === refreshSeq.current) setLoading(false);
     }
-  }, [day]);
+  }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (day == null) return;
+    void refresh(day);
+  }, [day, refresh]);
+
+  const availablePlayers = useMemo(() => {
+    const taken = assignedPlayerUuids(assignments);
+    return players.filter((p) => !taken.has(p.uuid));
+  }, [players, assignments]);
 
   const createFlight = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (day == null) return;
     setMessage(null);
     try {
       await flightApi.create({ day, number: flightNumber });
       setMessage(`Flight ${flightNumber} created for day ${day}.`);
-      await refresh();
+      await refresh(day);
     } catch (err) {
       setError(normalizeError(err));
     }
@@ -72,6 +114,7 @@ export default function AdminFlightsPage() {
 
   const assignPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (day == null || !assignPlayerUuid) return;
     setMessage(null);
     try {
       await flightApi.assign({
@@ -80,14 +123,38 @@ export default function AdminFlightsPage() {
         playerUuid: assignPlayerUuid,
       });
       setMessage("Player assigned to flight.");
-      await refresh();
+      await refresh(day);
     } catch (err) {
       setError(normalizeError(err));
     }
   };
 
+  const removePlayer = async (playerUuid: string, name: string) => {
+    if (day == null) return;
+    if (
+      !window.confirm(
+        `Remove ${name} from their flight for day ${day}?`,
+      )
+    ) {
+      return;
+    }
+    setMessage(null);
+    setBusyPlayerUuid(playerUuid);
+    try {
+      await flightApi.unassign(day, playerUuid);
+      setMessage(`${name} removed from flight.`);
+      await refresh(day);
+    } catch (err) {
+      setError(normalizeError(err));
+    } finally {
+      setBusyPlayerUuid(null);
+    }
+  };
+
   const playerName = (uuid: string) =>
     players.find((p) => p.uuid === uuid)?.name ?? uuid.slice(0, 8);
+
+  const showLoading = tournamentLoading || day == null || loading;
 
   return (
     <FairwayShell>
@@ -112,9 +179,10 @@ export default function AdminFlightsPage() {
           <input
             type="number"
             min={1}
-            value={day}
+            value={day ?? ""}
+            disabled={day == null}
             onChange={(e) => setDay(Number(e.target.value))}
-            className="w-20 rounded-lg border border-border px-2 py-1"
+            className="w-20 rounded-lg border border-border px-2 py-1 disabled:opacity-50"
           />
         </label>
 
@@ -136,7 +204,8 @@ export default function AdminFlightsPage() {
             </label>
             <button
               type="submit"
-              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
+              disabled={day == null}
+              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
               Create
             </button>
@@ -152,13 +221,18 @@ export default function AdminFlightsPage() {
               <select
                 value={assignPlayerUuid}
                 onChange={(e) => setAssignPlayerUuid(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                disabled={availablePlayers.length === 0}
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2 disabled:opacity-50"
               >
-                {players.map((p) => (
-                  <option key={p.uuid} value={p.uuid}>
-                    {p.name}
-                  </option>
-                ))}
+                {availablePlayers.length === 0 ? (
+                  <option value="">All players assigned</option>
+                ) : (
+                  availablePlayers.map((p) => (
+                    <option key={p.uuid} value={p.uuid}>
+                      {p.name}
+                    </option>
+                  ))
+                )}
               </select>
             </label>
             <label className="mt-3 block text-sm font-semibold">
@@ -169,7 +243,7 @@ export default function AdminFlightsPage() {
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2"
               >
                 {flights.map((f) => (
-                  <option key={f.number} value={f.number}>
+                  <option key={`${day}-${f.number}`} value={f.number}>
                     Flight {f.number}
                   </option>
                 ))}
@@ -177,7 +251,11 @@ export default function AdminFlightsPage() {
             </label>
             <button
               type="submit"
-              disabled={flights.length === 0 || players.length === 0}
+              disabled={
+                day == null ||
+                flights.length === 0 ||
+                availablePlayers.length === 0
+              }
               className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
               Assign
@@ -190,24 +268,40 @@ export default function AdminFlightsPage() {
           <p className="text-sm font-semibold text-success">{message}</p>
         )}
 
-        {loading ? (
+        {showLoading ? (
           <LoadingState />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {flights.map((f) => (
               <div
-                key={f.number}
+                key={`${day}-${f.number}`}
                 className="rounded-2xl bg-surface-mint p-4 shadow-[var(--shadow-soft)]"
               >
                 <h3 className="text-lg font-black text-primary">
                   Flight {f.number}
                 </h3>
-                <ul className="mt-2 space-y-1 text-sm">
-                  {(assignments[f.number] ?? []).map((a) => (
-                    <li key={a.playerUuid} className="font-semibold">
-                      {playerName(a.playerUuid)}
-                    </li>
-                  ))}
+                <ul className="mt-2 space-y-2 text-sm">
+                  {(assignments[f.number] ?? []).map((a) => {
+                    const name = playerName(a.playerUuid);
+                    return (
+                      <li
+                        key={a.playerUuid}
+                        className="flex items-center justify-between gap-3 font-semibold"
+                      >
+                        <span>{name}</span>
+                        <button
+                          type="button"
+                          disabled={busyPlayerUuid === a.playerUuid}
+                          onClick={() =>
+                            void removePlayer(a.playerUuid, name)
+                          }
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-error/10 disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    );
+                  })}
                   {(assignments[f.number] ?? []).length === 0 && (
                     <li className="text-muted">No players assigned</li>
                   )}
