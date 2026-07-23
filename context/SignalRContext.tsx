@@ -160,22 +160,24 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
           } else {
             // Another start is in flight — wait until Connected or terminal.
             const deadline = Date.now() + 30_000;
-            while (
-              connection.state !== HubConnectionState.Connected &&
-              Date.now() < deadline
-            ) {
+            while (Date.now() < deadline) {
+              const state = connection.state as HubConnectionState;
+              if (state === HubConnectionState.Connected) break;
               if (
-                connection.state === HubConnectionState.Disconnected ||
-                connection.state === HubConnectionState.Disconnecting
+                state === HubConnectionState.Disconnected ||
+                state === HubConnectionState.Disconnecting
               ) {
                 await connection.start();
                 break;
               }
               await new Promise((r) => setTimeout(r, 50));
             }
-            if (connection.state !== HubConnectionState.Connected) {
-              throw new Error("Verbindung nicht rechtzeitig hergestellt");
-            }
+          }
+          if (
+            (connection.state as HubConnectionState) !==
+            HubConnectionState.Connected
+          ) {
+            throw new Error("Verbindung nicht rechtzeitig hergestellt");
           }
           setConnectionState("connected");
           setLastError(null);
