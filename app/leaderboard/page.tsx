@@ -16,9 +16,9 @@ import { normalizeError } from "@/lib/errors";
 import { LeaderboardCategory } from "@/models/tournament";
 
 const categories: { id: LeaderboardCategory; label: string }[] = [
-  { id: LeaderboardCategory.Men, label: "Men" },
-  { id: LeaderboardCategory.Women, label: "Women" },
-  { id: LeaderboardCategory.Seniors, label: "Seniors" },
+  { id: LeaderboardCategory.Men, label: "Herren" },
+  { id: LeaderboardCategory.Women, label: "Damen" },
+  { id: LeaderboardCategory.Seniors, label: "Senioren" },
 ];
 
 export default function LeaderboardPage() {
@@ -64,10 +64,10 @@ export default function LeaderboardPage() {
             <Trophy className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-black tracking-wide text-primary">
-                LEADERBOARD
+                RANGLISTE
               </h1>
               <p className="text-xs text-muted">
-                Day {state?.currentDay ?? "—"} · live updates
+                Tag {state?.currentDay ?? "—"} · Live-Updates
               </p>
             </div>
           </div>
@@ -89,16 +89,16 @@ export default function LeaderboardPage() {
           {bootError ? (
             <p className="rounded-xl bg-error/10 p-4 text-error">{bootError}</p>
           ) : !ready && leaderboards.length === 0 ? (
-            <LoadingState message="Connecting to live leaderboard…" />
+            <LoadingState message="Verbindung zur Live-Rangliste…" />
           ) : (
             <LeaderboardTable entries={entries} />
           )}
         </div>
 
         <div className="mt-6 flex justify-center gap-6 pb-4">
-          <CircularAction label="Home" icon={<Home />} href={routes.home} />
+          <CircularAction label="Start" icon={<Home />} href={routes.home} />
           <CircularAction
-            label="Score"
+            label="Scoring"
             icon={<Flag />}
             variant="primary"
             href={routes.scoring}

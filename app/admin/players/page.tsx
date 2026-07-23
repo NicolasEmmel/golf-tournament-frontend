@@ -90,16 +90,17 @@ export default function AdminPlayersPage() {
       <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
         <div className="flex items-center justify-between gap-3">
           <MintCard className="flex-1">
-            <h1 className="text-2xl font-black text-primary">Players</h1>
+            <h1 className="text-2xl font-black text-primary">Spieler</h1>
             <p className="text-sm text-muted">
-              Players must exist before they can register for scoring by name.
+              Spieler müssen angelegt sein, bevor sie sich per Namen fürs Scoring
+              anmelden können.
             </p>
           </MintCard>
           <Link
             href={routes.admin}
             className="rounded-xl bg-surface px-4 py-2 text-sm font-semibold text-primary shadow-sm"
           >
-            Back
+            Zurück
           </Link>
         </div>
 
@@ -108,7 +109,7 @@ export default function AdminPlayersPage() {
           className="grid gap-3 rounded-2xl bg-surface p-5 shadow-[var(--shadow-soft)] md:grid-cols-2"
         >
           <h2 className="md:col-span-2 text-lg font-bold text-primary">
-            {editing ? `Edit ${editing.name}` : "Add player"}
+            {editing ? `${editing.name} bearbeiten` : "Spieler hinzufügen"}
           </h2>
           <label className="block text-sm font-semibold">
             Name
@@ -120,7 +121,7 @@ export default function AdminPlayersPage() {
             />
           </label>
           <label className="block text-sm font-semibold">
-            Gender
+            Geschlecht
             <select
               value={form.gender}
               onChange={(e) =>
@@ -131,8 +132,8 @@ export default function AdminPlayersPage() {
               }
               className="mt-1 w-full rounded-xl border border-border px-3 py-2"
             >
-              <option value={Gender.Male}>Male</option>
-              <option value={Gender.Female}>Female</option>
+              <option value={Gender.Male}>Männlich</option>
+              <option value={Gender.Female}>Weiblich</option>
             </select>
           </label>
           <label className="flex items-center gap-2 self-end text-sm font-semibold">
@@ -152,7 +153,7 @@ export default function AdminPlayersPage() {
               disabled={saving}
               className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {editing ? "Save changes" : "Create player"}
+              {editing ? "Änderungen speichern" : "Spieler anlegen"}
             </button>
             {editing && (
               <button
@@ -163,7 +164,7 @@ export default function AdminPlayersPage() {
                 }}
                 className="rounded-xl px-4 py-2 text-sm font-semibold"
               >
-                Cancel
+                Abbrechen
               </button>
             )}
           </div>
@@ -179,7 +180,7 @@ export default function AdminPlayersPage() {
               <thead className="bg-surface-mint text-left text-xs font-bold uppercase text-primary">
                 <tr>
                   <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Gender</th>
+                  <th className="px-4 py-3">Geschlecht</th>
                   <th className="px-4 py-3">Senior</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -189,9 +190,9 @@ export default function AdminPlayersPage() {
                   <tr key={p.uuid} className="border-t border-border/60">
                     <td className="px-4 py-3 font-semibold">{p.name}</td>
                     <td className="px-4 py-3">
-                      {p.gender === Gender.Female ? "Female" : "Male"}
+                      {p.gender === Gender.Female ? "Weiblich" : "Männlich"}
                     </td>
-                    <td className="px-4 py-3">{p.isSenior ? "Yes" : "No"}</td>
+                    <td className="px-4 py-3">{p.isSenior ? "Ja" : "Nein"}</td>
                     <td className="px-4 py-3 text-right space-x-2">
                       <button
                         type="button"
@@ -206,14 +207,14 @@ export default function AdminPlayersPage() {
                           });
                         }}
                       >
-                        Edit
+                        Bearbeiten
                       </button>
                       <button
                         type="button"
                         className="font-semibold text-error"
                         onClick={() => setPendingDelete(p)}
                       >
-                        Delete
+                        Löschen
                       </button>
                     </td>
                   </tr>
@@ -221,7 +222,7 @@ export default function AdminPlayersPage() {
               </tbody>
             </table>
             {players.length === 0 && (
-              <p className="p-6 text-center text-muted">No players yet.</p>
+              <p className="p-6 text-center text-muted">Noch keine Spieler.</p>
             )}
           </div>
         )}
@@ -229,9 +230,9 @@ export default function AdminPlayersPage() {
 
       <ConfirmDialog
         open={!!pendingDelete}
-        title="Delete player?"
-        message={`Remove ${pendingDelete?.name ?? "this player"} from the tournament registry?`}
-        confirmLabel="Delete"
+        title="Spieler löschen?"
+        message={`„${pendingDelete?.name ?? "Diesen Spieler"}“ aus dem Turnierverzeichnis entfernen?`}
+        confirmLabel="Löschen"
         destructive
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmDelete()}

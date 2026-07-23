@@ -9,20 +9,20 @@ import { routes } from "@/lib/constants";
 const sections = [
   {
     href: routes.adminPlayers,
-    label: "Players",
-    detail: "Create, edit, and remove players",
+    label: "Spieler",
+    detail: "Spieler anlegen, bearbeiten und entfernen",
     icon: Users,
   },
   {
     href: routes.adminFlights,
     label: "Flights",
-    detail: "Daily flights and player assignments",
+    detail: "Tägliche Flights und Spielerzuweisungen",
     icon: Plane,
   },
   {
     href: routes.adminTournament,
-    label: "Tournament",
-    detail: "Current day, course info, and reset",
+    label: "Turnier",
+    detail: "Aktueller Tag, Platzinfo und Reset",
     icon: CalendarDays,
   },
 ] as const;
@@ -32,10 +32,10 @@ export default function AdminPage() {
     <FairwayShell>
       <div className="mx-auto w-full max-w-5xl px-4 py-8">
         <MintCard>
-          <h1 className="text-3xl font-black text-primary">Administration</h1>
+          <h1 className="text-3xl font-black text-primary">Verwaltung</h1>
           <p className="mt-2 text-sm text-muted">
-            Manage players, flights, and tournament day. Destructive actions
-            require confirmation.
+            Spieler, Flights und Turniertag verwalten. Löschaktionen müssen
+            bestätigt werden.
           </p>
         </MintCard>
 

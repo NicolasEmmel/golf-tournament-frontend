@@ -105,7 +105,7 @@ export default function AdminFlightsPage() {
     setMessage(null);
     try {
       await flightApi.create({ day, number: flightNumber });
-      setMessage(`Flight ${flightNumber} created for day ${day}.`);
+      setMessage(`Flight ${flightNumber} für Tag ${day} angelegt.`);
       await refresh(day);
     } catch (err) {
       setError(normalizeError(err));
@@ -122,7 +122,7 @@ export default function AdminFlightsPage() {
         flightNumber: assignFlight,
         playerUuid: assignPlayerUuid,
       });
-      setMessage("Player assigned to flight.");
+      setMessage("Spieler dem Flight zugewiesen.");
       await refresh(day);
     } catch (err) {
       setError(normalizeError(err));
@@ -133,7 +133,7 @@ export default function AdminFlightsPage() {
     if (day == null) return;
     if (
       !window.confirm(
-        `Remove ${name} from their flight for day ${day}?`,
+        `${name} aus dem Flight für Tag ${day} entfernen?`,
       )
     ) {
       return;
@@ -142,7 +142,7 @@ export default function AdminFlightsPage() {
     setBusyPlayerUuid(playerUuid);
     try {
       await flightApi.unassign(day, playerUuid);
-      setMessage(`${name} removed from flight.`);
+      setMessage(`${name} aus dem Flight entfernt.`);
       await refresh(day);
     } catch (err) {
       setError(normalizeError(err));
@@ -163,19 +163,20 @@ export default function AdminFlightsPage() {
           <MintCard className="flex-1">
             <h1 className="text-2xl font-black text-primary">Flights</h1>
             <p className="text-sm text-muted">
-              Create flights per day and assign players so they can score.
+              Flights pro Tag anlegen und Spieler zuweisen, damit sie scoren
+              können.
             </p>
           </MintCard>
           <Link
             href={routes.admin}
             className="rounded-xl bg-surface px-4 py-2 text-sm font-semibold text-primary shadow-sm"
           >
-            Back
+            Zurück
           </Link>
         </div>
 
         <label className="inline-flex items-center gap-2 rounded-2xl bg-surface px-4 py-3 text-sm font-semibold shadow-sm">
-          Day
+          Tag
           <input
             type="number"
             min={1}
@@ -191,9 +192,9 @@ export default function AdminFlightsPage() {
             onSubmit={createFlight}
             className="rounded-2xl bg-surface p-5 shadow-[var(--shadow-soft)]"
           >
-            <h2 className="font-bold text-primary">Create flight</h2>
+            <h2 className="font-bold text-primary">Flight anlegen</h2>
             <label className="mt-3 block text-sm font-semibold">
-              Flight number
+              Flight-Nummer
               <input
                 type="number"
                 min={1}
@@ -207,7 +208,7 @@ export default function AdminFlightsPage() {
               disabled={day == null}
               className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              Create
+              Anlegen
             </button>
           </form>
 
@@ -215,9 +216,9 @@ export default function AdminFlightsPage() {
             onSubmit={assignPlayer}
             className="rounded-2xl bg-surface p-5 shadow-[var(--shadow-soft)]"
           >
-            <h2 className="font-bold text-primary">Assign player</h2>
+            <h2 className="font-bold text-primary">Spieler zuweisen</h2>
             <label className="mt-3 block text-sm font-semibold">
-              Player
+              Spieler
               <select
                 value={assignPlayerUuid}
                 onChange={(e) => setAssignPlayerUuid(e.target.value)}
@@ -225,7 +226,7 @@ export default function AdminFlightsPage() {
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2 disabled:opacity-50"
               >
                 {availablePlayers.length === 0 ? (
-                  <option value="">All players assigned</option>
+                  <option value="">Alle Spieler zugewiesen</option>
                 ) : (
                   availablePlayers.map((p) => (
                     <option key={p.uuid} value={p.uuid}>
@@ -258,7 +259,7 @@ export default function AdminFlightsPage() {
               }
               className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              Assign
+              Zuweisen
             </button>
           </form>
         </div>
@@ -297,19 +298,19 @@ export default function AdminFlightsPage() {
                           }
                           className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-error/10 disabled:opacity-50"
                         >
-                          Remove
+                          Entfernen
                         </button>
                       </li>
                     );
                   })}
                   {(assignments[f.number] ?? []).length === 0 && (
-                    <li className="text-muted">No players assigned</li>
+                    <li className="text-muted">Keine Spieler zugewiesen</li>
                   )}
                 </ul>
               </div>
             ))}
             {flights.length === 0 && (
-              <p className="text-muted">No flights for this day yet.</p>
+              <p className="text-muted">Noch keine Flights für diesen Tag.</p>
             )}
           </div>
         )}

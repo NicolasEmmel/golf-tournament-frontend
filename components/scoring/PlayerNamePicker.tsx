@@ -27,18 +27,20 @@ export function PlayerNamePicker({
   }, [players, query]);
 
   if (loading) {
-    return <LoadingState message="Loading players…" />;
+    return <LoadingState message="Spieler werden geladen…" />;
   }
 
   if (error) {
-    return <EmptyState title="Could not load players" message={error} />;
+    return (
+      <EmptyState title="Spieler konnten nicht geladen werden" message={error} />
+    );
   }
 
   return (
     <div className="space-y-4">
       <MintCard>
         <label className="block text-sm font-semibold text-primary" htmlFor="player-search">
-          Find your name
+          Namen suchen
         </label>
         <div className="relative mt-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -46,21 +48,21 @@ export function PlayerNamePicker({
             id="player-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type your name…"
+            placeholder="Namen eingeben…"
             className="w-full rounded-xl border border-border bg-surface py-3 pl-10 pr-3 text-base outline-none ring-primary focus:ring-2"
             autoComplete="off"
           />
         </div>
         <p className="mt-2 text-xs text-muted">
-          Select your name to start scoring for your assigned flight. No QR code
-          required.
+          Wählen Sie Ihren Namen, um für Ihren Flight zu scoren. Kein QR-Code
+          nötig.
         </p>
       </MintCard>
 
       {filtered.length === 0 ? (
         <EmptyState
-          title="No matching players"
-          message="Ask an admin to add you or check the spelling."
+          title="Keine passenden Spieler"
+          message="Bitten Sie einen Admin, Sie hinzuzufügen, oder prüfen Sie die Schreibweise."
         />
       ) : (
         <ul className="space-y-2">

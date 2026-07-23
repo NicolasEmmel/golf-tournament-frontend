@@ -38,7 +38,7 @@ export default function AdminTournamentPage() {
     setError(null);
     try {
       await setCurrentDay(dayInput);
-      setMessage(`Current day set to ${dayInput}.`);
+      setMessage(`Aktueller Tag auf ${dayInput} gesetzt.`);
     } catch (err) {
       setError(normalizeError(err));
     }
@@ -50,7 +50,7 @@ export default function AdminTournamentPage() {
     try {
       await tournamentApi.reset({ totalDays });
       await refresh();
-      setMessage("Tournament reset.");
+      setMessage("Turnier zurückgesetzt.");
     } catch (err) {
       setError(normalizeError(err));
     }
@@ -61,9 +61,9 @@ export default function AdminTournamentPage() {
       <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
         <div className="flex items-center justify-between gap-3">
           <MintCard className="flex-1">
-            <h1 className="text-2xl font-black text-primary">Tournament</h1>
+            <h1 className="text-2xl font-black text-primary">Turnier</h1>
             <p className="text-sm text-muted">
-              Current day {state?.currentDay ?? "—"} of{" "}
+              Aktueller Tag {state?.currentDay ?? "—"} von{" "}
               {state?.totalDays ?? "—"}
             </p>
           </MintCard>
@@ -71,7 +71,7 @@ export default function AdminTournamentPage() {
             href={routes.admin}
             className="rounded-xl bg-surface px-4 py-2 text-sm font-semibold text-primary shadow-sm"
           >
-            Back
+            Zurück
           </Link>
         </div>
 
@@ -79,9 +79,9 @@ export default function AdminTournamentPage() {
           onSubmit={saveDay}
           className="rounded-2xl bg-surface p-5 shadow-[var(--shadow-soft)]"
         >
-          <h2 className="font-bold text-primary">Change current day</h2>
+          <h2 className="font-bold text-primary">Aktuellen Tag ändern</h2>
           <label className="mt-3 block text-sm font-semibold">
-            Day
+            Tag
             <input
               type="number"
               min={1}
@@ -95,18 +95,18 @@ export default function AdminTournamentPage() {
             type="submit"
             className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
           >
-            Update day
+            Tag aktualisieren
           </button>
         </form>
 
         <div className="rounded-2xl bg-surface p-5 shadow-[var(--shadow-soft)]">
-          <h2 className="font-bold text-primary">Course</h2>
+          <h2 className="font-bold text-primary">Platz</h2>
           {course ? (
             <p className="mt-2 text-sm text-muted">
-              Par {course.par} · {course.holes.length} holes
+              Par {course.par} · {course.holes.length} Löcher
             </p>
           ) : (
-            <p className="mt-2 text-sm text-muted">Loading course…</p>
+            <p className="mt-2 text-sm text-muted">Platz wird geladen…</p>
           )}
           {course && (
             <div className="mt-3 grid grid-cols-6 gap-2 text-center text-xs sm:grid-cols-9">
@@ -125,13 +125,13 @@ export default function AdminTournamentPage() {
         </div>
 
         <div className="rounded-2xl border border-error/30 bg-surface p-5 shadow-[var(--shadow-soft)]">
-          <h2 className="font-bold text-error">Reset tournament</h2>
+          <h2 className="font-bold text-error">Turnier zurücksetzen</h2>
           <p className="mt-2 text-sm text-muted">
-            Clears all Redis tournament data (players, flights, scores,
-            leaderboards) and starts a new tournament.
+            Löscht alle Turnierdaten in Redis (Spieler, Flights, Ergebnisse,
+            Ranglisten) und startet ein neues Turnier.
           </p>
           <label className="mt-3 block text-sm font-semibold">
-            Total days after reset
+            Anzahl Tage nach dem Reset
             <input
               type="number"
               min={1}
@@ -145,7 +145,7 @@ export default function AdminTournamentPage() {
             onClick={() => setConfirmReset(true)}
             className="mt-4 rounded-xl bg-error px-4 py-2 text-sm font-semibold text-white"
           >
-            Reset tournament…
+            Turnier zurücksetzen…
           </button>
         </div>
 
@@ -157,9 +157,9 @@ export default function AdminTournamentPage() {
 
       <ConfirmDialog
         open={confirmReset}
-        title="Reset entire tournament?"
-        message="This permanently clears players, flights, scores, and leaderboards in Redis."
-        confirmLabel="Reset"
+        title="Gesamtes Turnier zurücksetzen?"
+        message="Dadurch werden Spieler, Flights, Ergebnisse und Ranglisten in Redis dauerhaft gelöscht."
+        confirmLabel="Zurücksetzen"
         destructive
         onCancel={() => setConfirmReset(false)}
         onConfirm={() => void doReset()}

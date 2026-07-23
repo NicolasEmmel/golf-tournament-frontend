@@ -11,9 +11,9 @@ import { useTournament } from "@/context/TournamentContext";
 import { LeaderboardCategory } from "@/models/tournament";
 
 const categories: { id: LeaderboardCategory; label: string }[] = [
-  { id: LeaderboardCategory.Men, label: "Men" },
-  { id: LeaderboardCategory.Women, label: "Women" },
-  { id: LeaderboardCategory.Seniors, label: "Seniors" },
+  { id: LeaderboardCategory.Men, label: "Herren" },
+  { id: LeaderboardCategory.Women, label: "Damen" },
+  { id: LeaderboardCategory.Seniors, label: "Senioren" },
 ];
 
 export default function DisplayPage() {
@@ -59,10 +59,10 @@ export default function DisplayPage() {
             <Trophy className="h-16 w-16 text-primary" />
             <div>
               <h1 className="text-5xl font-black tracking-tight text-primary md:text-6xl">
-                LEADERBOARD
+                RANGLISTE
               </h1>
               <p className="mt-2 text-xl text-muted">
-                Day {state?.currentDay ?? "—"} ·{" "}
+                Tag {state?.currentDay ?? "—"} ·{" "}
                 {categories.find((c) => c.id === category)?.label}
               </p>
             </div>
@@ -81,7 +81,7 @@ export default function DisplayPage() {
 
         <div className="mt-8 flex-1 text-lg [&_table]:text-base [&_th]:py-4 [&_td]:py-4">
           {!ready && entries.length === 0 ? (
-            <LoadingState message="Connecting…" />
+            <LoadingState message="Verbinden…" />
           ) : (
             <LeaderboardTable entries={entries} />
           )}

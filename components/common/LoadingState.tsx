@@ -1,4 +1,4 @@
-export function LoadingState({ message = "Loading…" }: { message?: string }) {
+export function LoadingState({ message = "Laden…" }: { message?: string }) {
   return (
     <div
       className="flex min-h-[12rem] flex-col items-center justify-center gap-3 text-muted"

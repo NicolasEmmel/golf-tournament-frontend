@@ -28,7 +28,7 @@ export async function apiFetch<T>(
       "error" in body &&
       typeof (body as { error: unknown }).error === "string"
         ? (body as { error: string }).error
-        : response.statusText || "Request failed";
+        : response.statusText || "Anfrage fehlgeschlagen";
     throw new ApiError(message, response.status, body);
   }
 

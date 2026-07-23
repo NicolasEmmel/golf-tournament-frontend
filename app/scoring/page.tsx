@@ -35,7 +35,9 @@ import {
 } from "@/services/api/tournamentApi";
 
 const FLIGHT_COMPLETE_MESSAGE =
-  "This flight has already submitted all scores for today.";
+  "Für diesen Flight wurden heute bereits alle Ergebnisse eingetragen.";
+
+const SCORES_SAVED_MESSAGE = "Ergebnisse gespeichert";
 
 export default function ScoringPage() {
   const router = useRouter();
@@ -151,7 +153,7 @@ export default function ScoringPage() {
       try {
         const result = await registerScoringClient(player.uuid);
         if (!result.success) {
-          setRegError(result.error ?? "Could not register for scoring.");
+          setRegError(result.error ?? "Registrierung fürs Scoring fehlgeschlagen.");
           clearScoringSession();
           resumeHoleIndex.current = null;
           return;
@@ -316,7 +318,7 @@ export default function ScoringPage() {
           strokes,
         });
         if (!result.success) {
-          throw new Error(result.error ?? `Failed for ${mate.name}`);
+          throw new Error(result.error ?? `Fehler bei ${mate.name}`);
         }
         nextSaved[key] = strokes;
       }
@@ -332,7 +334,7 @@ export default function ScoringPage() {
         return;
       }
 
-      setStatusMessage("Scores saved");
+      setStatusMessage(SCORES_SAVED_MESSAGE);
       if (holeIndex < HOLE_COUNT - 1) {
         setHoleIndex((i) => i + 1);
       }
@@ -362,9 +364,9 @@ export default function ScoringPage() {
       <FairwayShell>
         <div className="mx-auto w-full max-w-lg px-4 py-6">
           <MintCard className="mb-4">
-            <h1 className="text-2xl font-black text-primary">Score entry</h1>
+            <h1 className="text-2xl font-black text-primary">Ergebniserfassung</h1>
             <p className="mt-1 text-sm text-muted">
-              Register with your name to score your flight.
+              Melden Sie sich mit Ihrem Namen an, um Ihren Flight zu scoren.
             </p>
             <div className="mt-3">
               <ConnectionStatus state={connectionState} />
@@ -372,11 +374,11 @@ export default function ScoringPage() {
           </MintCard>
           {regError && (
             <div className="mb-4">
-              <ErrorState title="Cannot start scoring" message={regError} />
+              <ErrorState title="Scoring nicht möglich" message={regError} />
             </div>
           )}
           {registering || (selected && !sessionReady) ? (
-            <LoadingState message="Connecting and registering…" />
+            <LoadingState message="Verbinden und registrieren…" />
           ) : (
             <PlayerNamePicker
               players={players}
@@ -397,17 +399,17 @@ export default function ScoringPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase text-muted">
-                Flight {scorecard?.flightNumber ?? "—"} · Day {day}
+                Flight {scorecard?.flightNumber ?? "—"} · Tag {day}
               </p>
               <h1 className="text-4xl font-black text-primary">
-                Hole {hole?.number ?? "—"}
+                Loch {hole?.number ?? "—"}
               </h1>
               <p className="mt-1 text-sm font-semibold text-foreground">
                 Par {hole?.par ?? "—"} · SI {hole?.strokeIndex ?? "—"}
               </p>
               {hole?.number === 18 && (
                 <span className="mt-2 inline-block rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase text-white">
-                  Final hole
+                  Letztes Loch
                 </span>
               )}
             </div>
@@ -420,7 +422,7 @@ export default function ScoringPage() {
               onClick={resetSession}
               className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
             >
-              Change player
+              Spieler wechseln
             </button>
           </div>
         </MintCard>
@@ -454,11 +456,11 @@ export default function ScoringPage() {
                         : "text-xs font-semibold text-warning"
                     }
                   >
-                    {isSaved ? "Saved" : "Unsaved"}
+                    {isSaved ? "Gespeichert" : "Nicht gespeichert"}
                   </span>
                 </div>
                 <ScoreStepper
-                  label="Strokes"
+                  label="Schläge"
                   value={value}
                   onChange={(next) =>
                     setDrafts((prev) => ({ ...prev, [key]: next }))
@@ -472,7 +474,7 @@ export default function ScoringPage() {
         {statusMessage && (
           <p
             className={`mt-3 text-center text-sm font-semibold ${
-              statusMessage === "Scores saved" ? "text-success" : "text-error"
+              statusMessage === SCORES_SAVED_MESSAGE ? "text-success" : "text-error"
             }`}
           >
             {statusMessage}
@@ -486,11 +488,11 @@ export default function ScoringPage() {
             disabled={holeIndex <= 0}
             onClick={() => setHoleIndex((i) => Math.max(0, i - 1))}
           >
-            Prev
+            Zurück
           </button>
           <span className="text-xs font-semibold text-muted">
             {holeIndex + 1} / {HOLE_COUNT}
-            {unsavedForHole ? " · unsaved" : ""}
+            {unsavedForHole ? " · nicht gespeichert" : ""}
           </span>
           <button
             type="button"
@@ -498,24 +500,24 @@ export default function ScoringPage() {
             disabled={holeIndex >= HOLE_COUNT - 1}
             onClick={() => setHoleIndex((i) => Math.min(HOLE_COUNT - 1, i + 1))}
           >
-            Next
+            Weiter
           </button>
         </div>
 
         <div className="mt-6 flex justify-center gap-5 pb-6">
           <CircularAction
-            label="Send"
+            label="Senden"
             icon={<Send />}
             variant="primary"
             disabled={submitting || !hole}
             onClick={() => void handleSubmitHole()}
           />
           <CircularAction
-            label="Board"
+            label="Rangliste"
             icon={<Trophy />}
             href={routes.leaderboard}
           />
-          <CircularAction label="Home" icon={<Home />} href={routes.home} />
+          <CircularAction label="Start" icon={<Home />} href={routes.home} />
         </div>
       </div>
     </FairwayShell>

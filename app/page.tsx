@@ -22,8 +22,8 @@ export default function HomePage() {
         </h1>
         <p className="mt-3 text-center text-sm text-muted">
           {state
-            ? `Day ${state.currentDay} of ${state.totalDays}`
-            : "Live tournament scoring"}
+            ? `Tag ${state.currentDay} von ${state.totalDays}`
+            : "Live-Turnier-Scoring"}
         </p>
         <div className="mt-4">
           <ConnectionStatus state={connectionState} />
@@ -32,28 +32,28 @@ export default function HomePage() {
         <div className="mt-12 flex w-full flex-col gap-4">
           <PrimaryCta href={routes.scoring}>
             <Users className="h-5 w-5" />
-            Start scoring
+            Scoring starten
           </PrimaryCta>
           <PrimaryCta href={routes.leaderboard}>
             <Trophy className="h-5 w-5" />
-            View leaderboard
+            Rangliste anzeigen
           </PrimaryCta>
           <PrimaryCta href={routes.display}>
             <Trophy className="h-5 w-5" />
-            Big-screen display
+            Großanzeige
           </PrimaryCta>
           <PrimaryCta href={routes.admin} className="hidden md:flex">
             <LayoutDashboard className="h-5 w-5" />
-            Administration
+            Verwaltung
           </PrimaryCta>
         </div>
 
         <p className="mt-10 text-center text-xs text-muted">
-          Scoring uses your{" "}
+          Fürs Scoring wählen Sie Ihren{" "}
           <Link href={routes.scoring} className="font-semibold text-primary underline-offset-2 hover:underline">
-            player name
+            Spielernamen
           </Link>
-          — no QR code needed.
+          — kein QR-Code nötig.
         </p>
       </div>
     </FairwayShell>

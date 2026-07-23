@@ -3,9 +3,9 @@ import { APP_NAME, routes } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: routes.leaderboard, label: "Leaderboard" },
+  { href: routes.leaderboard, label: "Rangliste" },
   { href: routes.scoring, label: "Scoring" },
-  { href: routes.display, label: "Display" },
+  { href: routes.display, label: "Anzeige" },
   { href: routes.admin, label: "Admin" },
 ] as const;
 
@@ -30,7 +30,7 @@ export function AppHeader({
         <Link href={routes.home} className="text-lg font-bold text-primary">
           {APP_NAME}
         </Link>
-        <nav aria-label="Main" className="flex flex-wrap gap-1 sm:gap-2">
+        <nav aria-label="Hauptnavigation" className="flex flex-wrap gap-1 sm:gap-2">
           {navItems.map((item) => (
             <Link
               key={item.href}

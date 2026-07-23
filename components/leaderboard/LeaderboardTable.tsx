@@ -12,7 +12,7 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
   if (entries.length === 0) {
     return (
       <p className="py-10 text-center text-muted">
-        No players with recorded holes yet.
+        Noch keine Spieler mit erfassten Löchern.
       </p>
     );
   }
@@ -23,10 +23,10 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
         <thead>
           <tr className="border-b border-border bg-surface-mint text-xs font-bold uppercase tracking-wide text-primary">
             <th className="px-3 py-3">#</th>
-            <th className="px-3 py-3">Player</th>
+            <th className="px-3 py-3">Spieler</th>
             <th className="px-3 py-3 text-center">Thru</th>
-            <th className="px-3 py-3 text-center">Day</th>
-            <th className="px-3 py-3 text-center">Gross</th>
+            <th className="px-3 py-3 text-center">Tag</th>
+            <th className="px-3 py-3 text-center">Brutto</th>
           </tr>
         </thead>
         <tbody>

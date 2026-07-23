@@ -58,7 +58,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   const connectionRef = useRef<HubConnection | null>(null);
   const registrationRef = useRef<RegistrationMode>({ kind: "none" });
   const [connectionState, setConnectionState] =
-    useState<SignalRConnectionState>("disconnected");
+    useState<SignalRConnectionState>("connecting");
   const [lastError, setLastError] = useState<string | null>(null);
   const [syncPayload, setSyncPayload] = useState<ClientSyncPayload | null>(
     null,
@@ -130,7 +130,9 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
         setLastError(null);
         void reRegister(connection).catch((error) => {
           const message =
-            error instanceof Error ? error.message : "Re-registration failed";
+            error instanceof Error
+              ? error.message
+              : "Erneute Registrierung fehlgeschlagen";
           setLastError(message);
         });
       });
@@ -149,7 +151,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         setConnectionState("failed");
         const message =
-          error instanceof Error ? error.message : "Failed to connect";
+          error instanceof Error ? error.message : "Verbindung fehlgeschlagen";
         setLastError(message);
         throw error;
       }
@@ -160,11 +162,14 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   }, [applySync, reRegister]);
 
   useEffect(() => {
+    void ensureConnected().catch(() => {
+      // State already updated to failed inside ensureConnected.
+    });
     return () => {
       void connectionRef.current?.stop();
       connectionRef.current = null;
     };
-  }, []);
+  }, [ensureConnected]);
 
   const registerScoringClient = useCallback(
     async (playerUuid: string) => {
@@ -173,7 +178,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       setRegisteredPlayerUuid(playerUuid);
       const result = await hubRegisterScoring(connection, playerUuid);
       if (!result.success) {
-        setLastError(result.error ?? "Registration failed");
+        setLastError(result.error ?? "Registrierung fehlgeschlagen");
         registrationRef.current = { kind: "none" };
         setRegisteredPlayerUuid(null);
       }
@@ -194,7 +199,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       const connection = await ensureConnected();
       const result = await hubSubmitScore(connection, request);
       if (!result.success) {
-        setLastError(result.error ?? "Score submit failed");
+        setLastError(result.error ?? "Ergebnis konnte nicht gesendet werden");
       }
       return result;
     },

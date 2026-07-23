@@ -10,10 +10,10 @@ export function ConnectionStatus({
 }) {
   const labels: Record<SignalRConnectionState, string> = {
     disconnected: "Offline",
-    connecting: "Connecting…",
+    connecting: "Verbinden…",
     connected: "Live",
-    reconnecting: "Reconnecting…",
-    failed: "Connection failed",
+    reconnecting: "Neu verbinden…",
+    failed: "Verbindung fehlgeschlagen",
   };
 
   const styles: Record<SignalRConnectionState, string> = {

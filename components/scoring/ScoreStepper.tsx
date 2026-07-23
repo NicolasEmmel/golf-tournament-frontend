@@ -23,7 +23,7 @@ export function ScoreStepper({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          aria-label="Decrease"
+          aria-label="Verringern"
           className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-primary shadow-sm disabled:opacity-40"
           disabled={value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
@@ -35,7 +35,7 @@ export function ScoreStepper({
         </span>
         <button
           type="button"
-          aria-label="Increase"
+          aria-label="Erhöhen"
           className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-primary shadow-sm disabled:opacity-40"
           disabled={value >= max}
           onClick={() => onChange(Math.min(max, value + 1))}
