@@ -4,15 +4,14 @@ Next.js (App Router) frontend for the [golf-tournament-backend](https://github.c
 
 ## Status
 
-**Phase 1 complete:** project foundation, routes, design tokens, typed backend contract docs, and test tooling. SignalR, scoring, leaderboard, and admin flows are not implemented yet.
+**Design system + core UX implemented** from Flutter reference `livescoringfrontendv1` (visual only):
 
-See `FRONTEND_PROJECT_CONTEXT.md` for the full product spec and phased plan.
+- Fairway radial background, mint cards, primary green `#2E7D32`
+- Name-based scoring registration (replaces QR)
+- Live leaderboard + display mode via SignalR
+- Full admin area (players, flights, tournament)
 
-## Stack
-
-- Next.js · React · TypeScript · Tailwind CSS
-- Vitest (unit) · Playwright (e2e)
-- SignalR client (Phase 4)
+See `docs/DESIGN_GUIDELINES.md` and `docs/BACKEND_CONTRACT.md`.
 
 ## Local development
 
@@ -42,6 +41,18 @@ Open [http://localhost:3000](http://localhost:3000).
 - Hub events: [`services/signalr/events.ts`](services/signalr/events.ts)
 
 Production backend: `https://golf-tournament-backend.fly.dev`
+
+## Deployment (GitHub Pages)
+
+The site is published to the same public URL as the old Flutter app:
+
+**https://www.livescoringkitzingen.de/**
+
+- Static export (`output: "export"`) via `.github/workflows/deploy-pages.yml`
+- Custom domain `www.livescoringkitzingen.de` (also covers `livescoringkitzingen.de` in DNS/certs)
+- Every push to `main` rebuilds and deploys
+
+The repository must remain **public** for GitHub Pages on a free personal account.
 
 ## Routes
 
