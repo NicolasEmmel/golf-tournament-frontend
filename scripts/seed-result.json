@@ -1,0 +1,30 @@
+[
+  {
+    "uuid": "54392f2a-21b3-441a-9bea-1f0ead63d02e",
+    "name": "Alice Men",
+    "handicapIndex": 12.4,
+    "gender": 0,
+    "isSenior": false
+  },
+  {
+    "uuid": "e5edf53c-97e9-48bd-9e73-e079a75e4e2d",
+    "name": "Bob Men",
+    "handicapIndex": 8.1,
+    "gender": 0,
+    "isSenior": false
+  },
+  {
+    "uuid": "79382528-efac-4da5-9cd1-4e7796b1431b",
+    "name": "Carla Women",
+    "handicapIndex": 15,
+    "gender": 1,
+    "isSenior": false
+  },
+  {
+    "uuid": "99818d2f-8d1e-4739-b1e8-553e9dc14d05",
+    "name": "Diana Women",
+    "handicapIndex": 20.2,
+    "gender": 1,
+    "isSenior": false
+  }
+]

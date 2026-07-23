@@ -33,12 +33,18 @@ import {
   submitScore as hubSubmitScore,
 } from "@/services/signalr/tournamentHub";
 
+type RegistrationMode =
+  | { kind: "none" }
+  | { kind: "leaderboard" }
+  | { kind: "scoring"; playerUuid: string };
+
 interface SignalRContextValue {
   connectionState: SignalRConnectionState;
   lastError: string | null;
   syncPayload: ClientSyncPayload | null;
   scorecard: PlayerScorecard | null;
   leaderboards: LeaderboardSnapshot[];
+  registeredPlayerUuid: string | null;
   ensureConnected: () => Promise<HubConnection>;
   registerScoringClient: (playerUuid: string) => Promise<OperationResult>;
   registerLeaderboardViewer: () => Promise<void>;
@@ -50,6 +56,7 @@ const SignalRContext = createContext<SignalRContextValue | null>(null);
 
 export function SignalRProvider({ children }: { children: ReactNode }) {
   const connectionRef = useRef<HubConnection | null>(null);
+  const registrationRef = useRef<RegistrationMode>({ kind: "none" });
   const [connectionState, setConnectionState] =
     useState<SignalRConnectionState>("disconnected");
   const [lastError, setLastError] = useState<string | null>(null);
@@ -58,11 +65,30 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   );
   const [scorecard, setScorecard] = useState<PlayerScorecard | null>(null);
   const [leaderboards, setLeaderboards] = useState<LeaderboardSnapshot[]>([]);
+  const [registeredPlayerUuid, setRegisteredPlayerUuid] = useState<
+    string | null
+  >(null);
 
   const applySync = useCallback((payload: ClientSyncPayload) => {
     setSyncPayload(payload);
-    setScorecard(payload.scorecard);
+    const reg = registrationRef.current;
+    if (reg.kind === "scoring") {
+      if (payload.scorecard?.playerUuid === reg.playerUuid) {
+        setScorecard(payload.scorecard);
+      }
+    } else {
+      setScorecard(payload.scorecard);
+    }
     setLeaderboards(payload.leaderboards ?? []);
+  }, []);
+
+  const reRegister = useCallback(async (connection: HubConnection) => {
+    const reg = registrationRef.current;
+    if (reg.kind === "leaderboard") {
+      await hubRegisterLeaderboard(connection);
+    } else if (reg.kind === "scoring") {
+      await hubRegisterScoring(connection, reg.playerUuid);
+    }
   }, []);
 
   const ensureConnected = useCallback(async () => {
@@ -79,7 +105,15 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
 
       attachTournamentHubHandlers(connection, {
         onSyncState: applySync,
-        onScorecardUpdated: setScorecard,
+        onScorecardUpdated: (card) => {
+          const reg = registrationRef.current;
+          // Only keep the registered scorer's card — flight-mate submits must not
+          // overwrite the local player's scorecard in shared state.
+          if (reg.kind === "scoring" && card.playerUuid !== reg.playerUuid) {
+            return;
+          }
+          setScorecard(card);
+        },
         onLeaderboardUpdated: (snapshot) => {
           setLeaderboards((prev) => {
             const others = prev.filter((s) => s.category !== snapshot.category);
@@ -94,6 +128,11 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       connection.onreconnected(() => {
         setConnectionState("connected");
         setLastError(null);
+        void reRegister(connection).catch((error) => {
+          const message =
+            error instanceof Error ? error.message : "Re-registration failed";
+          setLastError(message);
+        });
       });
       connection.onclose(() => {
         setConnectionState("disconnected");
@@ -118,7 +157,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
 
     setConnectionState(mapHubState(connection.state) as SignalRConnectionState);
     return connection;
-  }, [applySync]);
+  }, [applySync, reRegister]);
 
   useEffect(() => {
     return () => {
@@ -130,9 +169,13 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   const registerScoringClient = useCallback(
     async (playerUuid: string) => {
       const connection = await ensureConnected();
+      registrationRef.current = { kind: "scoring", playerUuid };
+      setRegisteredPlayerUuid(playerUuid);
       const result = await hubRegisterScoring(connection, playerUuid);
       if (!result.success) {
         setLastError(result.error ?? "Registration failed");
+        registrationRef.current = { kind: "none" };
+        setRegisteredPlayerUuid(null);
       }
       return result;
     },
@@ -141,6 +184,8 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
 
   const registerLeaderboardViewer = useCallback(async () => {
     const connection = await ensureConnected();
+    registrationRef.current = { kind: "leaderboard" };
+    setRegisteredPlayerUuid(null);
     await hubRegisterLeaderboard(connection);
   }, [ensureConnected]);
 
@@ -157,6 +202,8 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   );
 
   const clearSync = useCallback(() => {
+    registrationRef.current = { kind: "none" };
+    setRegisteredPlayerUuid(null);
     setSyncPayload(null);
     setScorecard(null);
   }, []);
@@ -168,6 +215,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       syncPayload,
       scorecard,
       leaderboards,
+      registeredPlayerUuid,
       ensureConnected,
       registerScoringClient,
       registerLeaderboardViewer,
@@ -180,6 +228,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       syncPayload,
       scorecard,
       leaderboards,
+      registeredPlayerUuid,
       ensureConnected,
       registerScoringClient,
       registerLeaderboardViewer,

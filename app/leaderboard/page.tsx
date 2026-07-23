@@ -54,13 +54,20 @@ export default function LeaderboardPage() {
 
   const entries = useMemo(() => {
     if (category === "all") {
-      return leaderboards
-        .flatMap((s) => s.entries)
-        .sort((a, b) => a.netto - b.netto || a.gross - b.gross);
+      const byPlayer = new Map<string, (typeof leaderboards)[0]["entries"][0]>();
+      for (const snapshot of leaderboards) {
+        for (const entry of snapshot.entries) {
+          const existing = byPlayer.get(entry.playerUuid);
+          if (!existing || entry.netto < existing.netto) {
+            byPlayer.set(entry.playerUuid, entry);
+          }
+        }
+      }
+      return [...byPlayer.values()].sort(
+        (a, b) => a.netto - b.netto || a.gross - b.gross,
+      );
     }
-    return (
-      leaderboards.find((s) => s.category === category)?.entries ?? []
-    );
+    return leaderboards.find((s) => s.category === category)?.entries ?? [];
   }, [leaderboards, category]);
 
   // Remap positions when "all" merges categories

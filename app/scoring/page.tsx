@@ -1,11 +1,12 @@
 "use client";
 
 import { Flag, Home, Send, Trophy } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CircularAction } from "@/components/common/CircularAction";
 import { ConnectionStatus } from "@/components/common/ConnectionStatus";
 import { ErrorState } from "@/components/common/ErrorState";
 import { FairwayShell } from "@/components/common/FairwayShell";
+import { LoadingState } from "@/components/common/LoadingState";
 import { MintCard } from "@/components/common/MintCard";
 import { PlayerNamePicker } from "@/components/scoring/PlayerNamePicker";
 import { ScoreStepper } from "@/components/scoring/ScoreStepper";
@@ -39,6 +40,7 @@ export default function ScoringPage() {
   const [selected, setSelected] = useState<Player | null>(null);
   const [registering, setRegistering] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
 
   const [course, setCourse] = useState<CourseInfo | null>(null);
   const [flightMates, setFlightMates] = useState<Player[]>([]);
@@ -47,6 +49,7 @@ export default function ScoringPage() {
   const [saved, setSaved] = useState<DraftScores>({});
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const initialHoleSetFor = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +73,9 @@ export default function ScoringPage() {
   }, []);
 
   const hole: Hole | undefined = course?.holes[holeIndex];
-  const day = state?.currentDay ?? scorecard?.day ?? 1;
+  // Prefer the day from the registered sync scorecard so day changes mid-session
+  // do not silently retarget submissions.
+  const day = scorecard?.day ?? state?.currentDay ?? 1;
 
   const loadFlight = useCallback(
     async (player: Player, flightNumber: number, currentDay: number) => {
@@ -80,11 +85,35 @@ export default function ScoringPage() {
       );
       const uuids = new Set(assignments.map((a: PlayerFlight) => a.playerUuid));
       const mates = players.filter((p) => uuids.has(p.uuid));
-      // Ensure selected player is included even if list race
       if (!mates.some((m) => m.uuid === player.uuid)) {
         mates.unshift(player);
       }
-      setFlightMates(mates.length ? mates : [player]);
+      const resolved = mates.length ? mates : [player];
+      setFlightMates(resolved);
+
+      const mateCards = await Promise.all(
+        resolved.map(async (mate) => {
+          try {
+            return await tournamentApi.getScorecard(currentDay, mate.uuid);
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      const fromServer: DraftScores = {};
+      for (const card of mateCards) {
+        if (!card) continue;
+        for (const h of card.holes) {
+          if (h.strokes > 0) {
+            fromServer[`${card.playerUuid}:${h.holeId}`] = h.strokes;
+          }
+        }
+      }
+      if (Object.keys(fromServer).length > 0) {
+        setSaved((prev) => ({ ...prev, ...fromServer }));
+        setDrafts((prev) => ({ ...prev, ...fromServer }));
+      }
     },
     [players],
   );
@@ -92,17 +121,18 @@ export default function ScoringPage() {
   const handleSelectPlayer = async (player: Player) => {
     setRegError(null);
     setRegistering(true);
-    setSelected(player);
+    setSessionReady(false);
     try {
       const result = await registerScoringClient(player.uuid);
       if (!result.success) {
         setRegError(result.error ?? "Could not register for scoring.");
-        setSelected(null);
         return;
       }
+      initialHoleSetFor.current = null;
+      setSelected(player);
+      setSessionReady(true);
     } catch (err) {
       setRegError(normalizeError(err));
-      setSelected(null);
     } finally {
       setRegistering(false);
     }
@@ -110,10 +140,11 @@ export default function ScoringPage() {
 
   useEffect(() => {
     if (!selected || !scorecard) return;
+    if (scorecard.playerUuid !== selected.uuid) return;
+
     const currentDay = scorecard.day;
     void loadFlight(selected, scorecard.flightNumber, currentDay);
 
-    // Seed drafts from known scorecard for selected player; default others to par later
     const nextSaved: DraftScores = {};
     for (const h of scorecard.holes) {
       if (h.strokes > 0) {
@@ -123,10 +154,18 @@ export default function ScoringPage() {
     setSaved((prev) => ({ ...prev, ...nextSaved }));
     setDrafts((prev) => ({ ...prev, ...nextSaved }));
 
-    // Start at first incomplete hole
-    const firstOpen = scorecard.holes.findIndex((h) => h.strokes <= 0);
-    setHoleIndex(firstOpen >= 0 ? firstOpen : 0);
+    // Only pick the starting hole once per player session — later scorecard
+    // updates must not fight with Send's hole advance (that skipped holes).
+    if (initialHoleSetFor.current !== selected.uuid) {
+      initialHoleSetFor.current = selected.uuid;
+      const firstOpen = scorecard.holes.findIndex((h) => h.strokes <= 0);
+      setHoleIndex(firstOpen >= 0 ? firstOpen : 0);
+    }
   }, [selected, scorecard, loadFlight]);
+
+  useEffect(() => {
+    setStatusMessage(null);
+  }, [holeIndex]);
 
   useEffect(() => {
     if (!hole || !flightMates.length) return;
@@ -184,14 +223,16 @@ export default function ScoringPage() {
   const resetSession = () => {
     clearSync();
     setSelected(null);
+    setSessionReady(false);
     setFlightMates([]);
     setDrafts({});
     setSaved({});
     setRegError(null);
     setStatusMessage(null);
+    initialHoleSetFor.current = null;
   };
 
-  if (!selected) {
+  if (!selected || !sessionReady) {
     return (
       <FairwayShell>
         <div className="mx-auto w-full max-w-lg px-4 py-6">
@@ -210,7 +251,7 @@ export default function ScoringPage() {
             </div>
           )}
           {registering ? (
-            <p className="text-center text-muted">Registering…</p>
+            <LoadingState message="Connecting and registering…" />
           ) : (
             <PlayerNamePicker
               players={players}
