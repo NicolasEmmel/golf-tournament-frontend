@@ -1,22 +1,92 @@
-import { EmptyState } from "@/components/common/EmptyState";
+"use client";
+
+import { Trophy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { FairwayShell } from "@/components/common/FairwayShell";
+import { FilterChip } from "@/components/common/FilterChip";
+import { LoadingState } from "@/components/common/LoadingState";
+import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
+import { useSignalR } from "@/context/SignalRContext";
+import { useTournament } from "@/context/TournamentContext";
+import { LeaderboardCategory } from "@/models/tournament";
+
+const categories: { id: LeaderboardCategory; label: string }[] = [
+  { id: LeaderboardCategory.Men, label: "Men" },
+  { id: LeaderboardCategory.Women, label: "Women" },
+  { id: LeaderboardCategory.Seniors, label: "Seniors" },
+];
 
 export default function DisplayPage() {
+  const { state } = useTournament();
+  const { leaderboards, registerLeaderboardViewer, ensureConnected } =
+    useSignalR();
+  const [category, setCategory] = useState(LeaderboardCategory.Men);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await ensureConnected();
+        await registerLeaderboardViewer();
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureConnected, registerLeaderboardViewer]);
+
+  // Optional slow rotation between categories
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setCategory((c) => (c + 1) % 3);
+    }, 20000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const entries = useMemo(
+    () => leaderboards.find((s) => s.category === category)?.entries ?? [],
+    [leaderboards, category],
+  );
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-foreground px-6 py-10 text-background">
-      <div className="mx-auto max-w-7xl">
-        <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
-          Live leaderboard
-        </h1>
-        <p className="mt-4 text-lg text-background/70 md:text-2xl">
-          Display mode · Phase 8
-        </p>
-        <div className="mt-12">
-          <EmptyState
-            title="Awaiting live data"
-            message="Fullscreen leaderboard rotation will use the same SignalR feed as the public leaderboard."
-          />
+    <FairwayShell className="min-h-screen">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Trophy className="h-16 w-16 text-primary" />
+            <div>
+              <h1 className="text-5xl font-black tracking-tight text-primary md:text-6xl">
+                LEADERBOARD
+              </h1>
+              <p className="mt-2 text-xl text-muted">
+                Day {state?.currentDay ?? "—"} ·{" "}
+                {categories.find((c) => c.id === category)?.label}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {categories.map((c) => (
+              <FilterChip
+                key={c.id}
+                label={c.label}
+                selected={category === c.id}
+                onClick={() => setCategory(c.id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 flex-1 text-lg [&_table]:text-base [&_th]:py-4 [&_td]:py-4">
+          {!ready && entries.length === 0 ? (
+            <LoadingState message="Connecting…" />
+          ) : (
+            <LeaderboardTable entries={entries} />
+          )}
         </div>
       </div>
-    </div>
+    </FairwayShell>
   );
 }

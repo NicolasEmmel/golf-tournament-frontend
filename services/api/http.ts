@@ -9,7 +9,8 @@ export async function apiFetch<T>(
   const response = await fetch(url, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...init?.headers,
     },
   });

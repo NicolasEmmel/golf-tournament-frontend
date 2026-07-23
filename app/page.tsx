@@ -1,59 +1,61 @@
+"use client";
+
+import { Flag, LayoutDashboard, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { ConnectionStatus } from "@/components/common/ConnectionStatus";
-import { PageContainer } from "@/components/common/PageContainer";
-import { routes } from "@/lib/constants";
-import { environment } from "@/lib/environment";
-
-const entryPoints = [
-  {
-    href: routes.leaderboard,
-    title: "Leaderboard",
-    description: "Live standings for spectators and players.",
-  },
-  {
-    href: routes.scoring,
-    title: "Score entry",
-    description: "Mobile-friendly scoring for your assigned flight.",
-  },
-  {
-    href: routes.display,
-    title: "Big screen",
-    description: "High-contrast display for clubhouses and TVs.",
-  },
-  {
-    href: routes.admin,
-    title: "Administration",
-    description: "Players, flights, and tournament day management.",
-  },
-] as const;
+import { FairwayShell } from "@/components/common/FairwayShell";
+import { PrimaryCta } from "@/components/common/PrimaryCta";
+import { useSignalR } from "@/context/SignalRContext";
+import { useTournament } from "@/context/TournamentContext";
+import { APP_NAME, routes } from "@/lib/constants";
 
 export default function HomePage() {
+  const { connectionState } = useSignalR();
+  const { state } = useTournament();
+
   return (
-    <PageContainer
-      title="Welcome"
-      description="Choose a view to get started. Real-time updates will connect to the tournament backend once SignalR is wired up (Phase 4)."
-    >
-      <div className="mb-8 flex flex-wrap items-center gap-3">
-        <ConnectionStatus state="disconnected" />
-        <span className="text-sm text-muted">
-          API: {environment.apiBaseUrl}
-        </span>
+    <FairwayShell>
+      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-8 py-12">
+        <Flag className="h-28 w-28 text-primary" strokeWidth={1.25} aria-hidden />
+        <h1 className="mt-8 text-center text-3xl font-bold text-primary sm:text-4xl">
+          {APP_NAME}
+        </h1>
+        <p className="mt-3 text-center text-sm text-muted">
+          {state
+            ? `Day ${state.currentDay} of ${state.totalDays}`
+            : "Live tournament scoring"}
+        </p>
+        <div className="mt-4">
+          <ConnectionStatus state={connectionState} />
+        </div>
+
+        <div className="mt-12 flex w-full flex-col gap-4">
+          <PrimaryCta href={routes.scoring}>
+            <Users className="h-5 w-5" />
+            Start scoring
+          </PrimaryCta>
+          <PrimaryCta href={routes.leaderboard}>
+            <Trophy className="h-5 w-5" />
+            View leaderboard
+          </PrimaryCta>
+          <PrimaryCta href={routes.display}>
+            <Trophy className="h-5 w-5" />
+            Big-screen display
+          </PrimaryCta>
+          <PrimaryCta href={routes.admin}>
+            <LayoutDashboard className="h-5 w-5" />
+            Administration
+          </PrimaryCta>
+        </div>
+
+        <p className="mt-10 text-center text-xs text-muted">
+          Scoring uses your{" "}
+          <Link href={routes.scoring} className="font-semibold text-primary underline-offset-2 hover:underline">
+            player name
+          </Link>
+          — no QR code needed.
+        </p>
       </div>
-      <ul className="grid gap-4 sm:grid-cols-2">
-        {entryPoints.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              className="block h-full rounded-lg border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <h2 className="text-lg font-semibold text-primary">
-                {item.title}
-              </h2>
-              <p className="mt-2 text-sm text-muted">{item.description}</p>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </PageContainer>
+    </FairwayShell>
   );
 }

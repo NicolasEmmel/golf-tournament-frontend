@@ -14,3 +14,5 @@ alwaysApply: true
 - Prefer React Context + hooks over Redux unless requirements change.
 - Do not commit `.env.local` or secrets. Use `NEXT_PUBLIC_*` only for public URLs.
 - Implement one phase at a time; avoid speculative features.
+- Follow `docs/DESIGN_GUIDELINES.md` (Flutter is visual reference only).
+- Scoring registration is by **player name**, never QR.

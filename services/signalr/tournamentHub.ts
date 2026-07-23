@@ -1,5 +1,66 @@
-/** Phase 4: Typed invoke/subscribe wrapper around @microsoft/signalr. */
+import type { HubConnection } from "@microsoft/signalr";
+import type {
+  ClientSyncPayload,
+  LeaderboardSnapshot,
+  OperationResult,
+  PlayerScorecard,
+  SubmitScoreRequest,
+} from "@/models/tournament";
+import { TournamentHubEvents, TournamentHubMethods } from "./events";
 
-export const tournamentHub = {
-  // connect, registerScoringClient, registerLeaderboardViewer, submitScore
-} as const;
+export function attachTournamentHubHandlers(
+  connection: HubConnection,
+  handlers: {
+    onSyncState?: (payload: ClientSyncPayload) => void;
+    onScorecardUpdated?: (scorecard: PlayerScorecard) => void;
+    onLeaderboardUpdated?: (snapshot: LeaderboardSnapshot) => void;
+  },
+) {
+  if (handlers.onSyncState) {
+    connection.on(TournamentHubEvents.receiveSyncState, handlers.onSyncState);
+  }
+  if (handlers.onScorecardUpdated) {
+    connection.on(
+      TournamentHubEvents.scorecardUpdated,
+      handlers.onScorecardUpdated,
+    );
+  }
+  if (handlers.onLeaderboardUpdated) {
+    connection.on(
+      TournamentHubEvents.leaderboardUpdated,
+      handlers.onLeaderboardUpdated,
+    );
+  }
+
+  return () => {
+    connection.off(TournamentHubEvents.receiveSyncState);
+    connection.off(TournamentHubEvents.scorecardUpdated);
+    connection.off(TournamentHubEvents.leaderboardUpdated);
+  };
+}
+
+export async function registerScoringClient(
+  connection: HubConnection,
+  playerUuid: string,
+): Promise<OperationResult> {
+  return connection.invoke<OperationResult>(
+    TournamentHubMethods.registerScoringClient,
+    playerUuid,
+  );
+}
+
+export async function registerLeaderboardViewer(
+  connection: HubConnection,
+): Promise<void> {
+  await connection.invoke(TournamentHubMethods.registerLeaderboardViewer);
+}
+
+export async function submitScore(
+  connection: HubConnection,
+  request: SubmitScoreRequest,
+): Promise<OperationResult> {
+  return connection.invoke<OperationResult>(
+    TournamentHubMethods.submitScore,
+    request,
+  );
+}

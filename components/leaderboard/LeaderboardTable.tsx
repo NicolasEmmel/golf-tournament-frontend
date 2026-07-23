@@ -1,0 +1,70 @@
+import { cn } from "@/lib/utils";
+import type { LeaderboardEntry } from "@/models/tournament";
+
+function rankClass(position: number) {
+  if (position === 1) return "bg-rank-gold text-white";
+  if (position === 2) return "bg-rank-silver text-white";
+  if (position === 3) return "bg-rank-bronze text-white";
+  return "bg-primary/15 text-primary";
+}
+
+export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <p className="py-10 text-center text-muted">
+        No players with recorded holes yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-2xl bg-surface/90 shadow-[var(--shadow-soft)]">
+      <table className="w-full min-w-[36rem] text-left text-sm">
+        <thead>
+          <tr className="border-b border-border bg-surface-mint text-xs font-bold uppercase tracking-wide text-primary">
+            <th className="px-3 py-3">#</th>
+            <th className="px-3 py-3">Player</th>
+            <th className="px-3 py-3 text-center">Thru</th>
+            <th className="px-3 py-3 text-center">Day</th>
+            <th className="px-3 py-3 text-center">Gross</th>
+            <th className="px-3 py-3 text-center">Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr
+              key={entry.playerUuid}
+              className="border-b border-border/60 last:border-0"
+            >
+              <td className="px-3 py-3">
+                <span
+                  className={cn(
+                    "inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
+                    rankClass(entry.position),
+                  )}
+                >
+                  {entry.position}
+                </span>
+              </td>
+              <td className="px-3 py-3 font-extrabold text-foreground">
+                {entry.playerName}
+              </td>
+              <td className="px-3 py-3 text-center font-semibold tabular-nums">
+                {entry.thru >= 18 ? "F" : entry.thru}
+              </td>
+              <td className="px-3 py-3 text-center font-semibold tabular-nums">
+                {entry.totalStrokesDay || "—"}
+              </td>
+              <td className="px-3 py-3 text-center font-bold tabular-nums">
+                {entry.gross}
+              </td>
+              <td className="px-3 py-3 text-center font-bold tabular-nums text-primary">
+                {entry.netto}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

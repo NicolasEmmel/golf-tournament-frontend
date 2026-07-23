@@ -9,16 +9,24 @@ const navItems = [
   { href: routes.admin, label: "Admin" },
 ] as const;
 
-export function AppHeader({ className }: { className?: string }) {
+export function AppHeader({
+  className,
+  minimal = false,
+}: {
+  className?: string;
+  minimal?: boolean;
+}) {
+  if (minimal) return null;
+
   return (
     <header
       className={cn(
-        "border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80",
+        "border-b border-black/5 bg-surface-mint/90 backdrop-blur",
         className,
       )}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href={routes.home} className="text-lg font-semibold text-primary">
+        <Link href={routes.home} className="text-lg font-bold text-primary">
           {APP_NAME}
         </Link>
         <nav aria-label="Main" className="flex flex-wrap gap-1 sm:gap-2">
@@ -26,7 +34,7 @@ export function AppHeader({ className }: { className?: string }) {
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-primary/10 hover:text-primary"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:bg-primary/10 hover:text-primary"
             >
               {item.label}
             </Link>

@@ -1,0 +1,17 @@
+---
+description: Visual design system from Flutter livescoringfrontendv1 reference
+alwaysApply: true
+---
+
+# Design guidelines
+
+Read `docs/DESIGN_GUIDELINES.md` before changing UI.
+
+## Must follow
+
+- Primary green `#2E7D32`, mint surfaces `#E1F2D9`, radial sage wash `#959F96` → `#E5E5E5`
+- Soft rounded mint cards (16–20px), translucent landing CTAs, large circular mobile actions
+- Flutter repo is **read-only visual/UX reference** — never copy architecture or Dart code
+- Scoring registration is **by player name** (search/select), never QR
+- Admin uses the same palette; confirm destructive actions
+- No frontend score/handicap calculation; display backend values only
