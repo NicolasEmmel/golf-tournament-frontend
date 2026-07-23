@@ -8,6 +8,19 @@ function rankClass(position: number) {
   return "bg-primary/15 text-primary";
 }
 
+/** Sort by cumulative total (Gesamt), lowest first; re-rank for display. */
+function sortByTotalScore(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  return [...entries]
+    .sort((a, b) => {
+      const totalDiff = a.totalStrokes - b.totalStrokes;
+      if (totalDiff !== 0) return totalDiff;
+      const dayDiff = a.totalStrokesDay - b.totalStrokesDay;
+      if (dayDiff !== 0) return dayDiff;
+      return a.playerName.localeCompare(b.playerName, "de");
+    })
+    .map((entry, index) => ({ ...entry, position: index + 1 }));
+}
+
 export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
   if (entries.length === 0) {
     return (
@@ -16,6 +29,8 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
       </p>
     );
   }
+
+  const ranked = sortByTotalScore(entries);
 
   return (
     <div className="overflow-x-auto rounded-2xl bg-surface/90 shadow-[var(--shadow-soft)]">
@@ -30,7 +45,7 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
           </tr>
         </thead>
         <tbody>
-          {entries.map((entry) => (
+          {ranked.map((entry) => (
             <tr
               key={entry.playerUuid}
               className="border-b border-border/60 last:border-0"
